@@ -1,0 +1,24 @@
+#예시
+
+project_name: "MIP-0"
+entity: "dmachine-kyung-hee-university" # wandb 사용자/팀 이름
+epochs: 100
+
+data:
+  path: "./data"
+  batch_size: 128
+
+model:
+  name: "resnet18"
+  num_classes: 10
+
+optimizer:
+  name: "adam"
+  lr: 0.001       
+  weight_decay: 1e-4 
+
+scheduler:
+  name: "cosine" 
+
+criterion:
+  name: "cross_entropy"
