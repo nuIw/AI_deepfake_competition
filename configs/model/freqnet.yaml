@@ -1,7 +1,5 @@
 _target_ : networks.freqnet.FreqNet
+name : "freqnet"  # instantiate에서 제외됨
 layers : [3, 4]
 num_classes : 1
 zero_init_residual : False
-
-**_partial**: True
-**name** : 'freqnet'

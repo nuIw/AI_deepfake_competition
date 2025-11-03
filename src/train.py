@@ -46,7 +46,10 @@ def main(cfg: DictConfig):
     
     accelerator = Accelerator()
     
+    # model instantiate (name은 **kwargs로 자동 무시됨)
     model = instantiate(cfg.model)
+    model_name = cfg.model.name  # name 접근
+    
     optimizer = instantiate(cfg.optimizer, params=model.parameters())
     scheduler = instantiate(cfg.scheduler, optimizer=optimizer)
     criterion = instantiate(cfg.criterion)

@@ -105,8 +105,9 @@ class Bottleneck(nn.Module):
 
 class FreqNet(nn.Module):
 
-    def __init__(self, block=Bottleneck, layers=[3, 4], num_classes=1, zero_init_residual=False):
+    def __init__(self, block=Bottleneck, layers=[3, 4], num_classes=1, zero_init_residual=False, **kwargs):
         super(FreqNet, self).__init__()
+        # kwargs에 name 같은 추가 파라미터가 있어도 무시됨
 
 
 
