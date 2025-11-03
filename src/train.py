@@ -8,6 +8,14 @@ from accelerate import Accelerator
 import hydra
 from omegaconf import DictConfig, OmegaConf
 import os
+import sys
+from pathlib import Path
+
+# src를 Python path에 추가
+src_dir = Path(__file__).parent
+if str(src_dir) not in sys.path:
+    sys.path.insert(0, str(src_dir))
+
 from hydra.utils import instantiate
 
 @hydra.main(config_path='../configs',config_name='config.yaml',version_base=None)
