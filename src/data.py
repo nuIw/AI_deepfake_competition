@@ -19,6 +19,7 @@ def setup_kaggle_api():
     print(f'Using Kaggle JSON file: {KAGGLE_JSON_PATH}')
     
     os.environ['KAGGLE_CONFIG_DIR'] = KAGGLE_JSON_DIR
+    return True
     
 def get_data_path():
     data_root = LOCAL_DATA_PATH
