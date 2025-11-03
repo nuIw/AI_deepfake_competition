@@ -9,11 +9,18 @@ import torchvision.models as models
 
 from model.py import *
 
+# train.py에서 모델 yaml 파일 받아와서 그거 이용하는 식으로 해야할듯?
 def create_model(model_name, num_classes=10):
     """
     모델을 생성합니다. (torchvision 모델 예시)
     """
-    if model_name.lower() == 'resnet18':
+    if model_name == 'resnet18':
+        model = models.resnet18(weights=None, num_classes=num_classes)
+    elif model_name == 'vgg11':
+        model = models.vgg11(weights=None, num_classes=num_classes)
+    # ... 다른 모델들 추가 ...
+    else:
+        raise ValueError(f"Unknown model name: {model_name}")
     
     return model
 

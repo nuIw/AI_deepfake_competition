@@ -1,5 +1,4 @@
 import os
-import subprocess
 import pandas as pd
 from PIL import Image
 
@@ -8,8 +7,8 @@ import kagglehub
 from torch.utils.data import Dataset, DataLoader
 import torchvision.transforms as transforms
 
-LOCAL_DATA_PATH = './drive/MyDrive/Colab Notebooks/data'
-KAGGLE_JSON_DIR = './drive/MyDrive/Colab Notebooks/kaggle'
+LOCAL_DATA_PATH = '/content/drive/MyDrive/Colab Notebooks/data'
+KAGGLE_JSON_DIR = '/content/drive/MyDrive/Colab Notebooks/kaggle'
 KAGGLE_JSON_PATH = os.path.join(KAGGLE_JSON_DIR, 'kaggle.json')
 
 def setup_kaggle_api():
