@@ -7,63 +7,13 @@ import torchvision
 import torchvision.transforms as transforms
 import torchvision.models as models
 
-def create_dataloader(data_path, batch_size):
-    """
-    데이터셋과 데이터로더를 생성합니다. (CIFAR-10 예시)
-    """
-    # CIFAR-10의 평균과 표준편차
-    normalize = transforms.Normalize(mean=[0.4914, 0.4822, 0.4465],
-                                     std=[0.2023, 0.1994, 0.2010])
-
-    # 학습 데이터 변환 (Augmentation 포함)
-    transform_train = transforms.Compose([
-        transforms.RandomCrop(32, padding=4),
-        transforms.RandomHorizontalFlip(),
-        transforms.ToTensor(),
-        normalize,
-    ])
-
-    # 검증/테스트 데이터 변환 (Augmentation 없음)
-    transform_val = transforms.Compose([
-        transforms.ToTensor(),
-        normalize,
-    ])
-
-    train_dataset = torchvision.datasets.CIFAR10(
-        root=data_path, train=True, download=True, transform=transform_train)
-    
-    val_dataset = torchvision.datasets.CIFAR10(
-        root=data_path, train=False, download=True, transform=transform_val)
-
-    train_loader = DataLoader(
-        train_dataset, 
-        batch_size=batch_size, 
-        shuffle=True, 
-        num_workers=4, 
-        pin_memory=True
-    )
-    
-    val_loader = DataLoader(
-        val_dataset, 
-        batch_size=batch_size, 
-        shuffle=False, 
-        num_workers=4, 
-        pin_memory=True
-    )
-    
-    return train_loader, val_loader
+from model.py import *
 
 def create_model(model_name, num_classes=10):
     """
     모델을 생성합니다. (torchvision 모델 예시)
     """
-    if model_name == 'resnet18':
-        model = models.resnet18(weights=None, num_classes=num_classes)
-    elif model_name == 'vgg11':
-        model = models.vgg11(weights=None, num_classes=num_classes)
-    # ... 다른 모델들 추가 ...
-    else:
-        raise ValueError(f"Unknown model name: {model_name}")
+    if model_name.lower() == 'resnet18':
     
     return model
 

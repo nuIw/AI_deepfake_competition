@@ -27,7 +27,7 @@ def get_data_path():
     
     return data_root
 
-def download_kaggle_dataset(dataset_id, local_dir):
+def download_kaggle_dataset(dataset_id, local_dir=LOCAL_DATA_PATH):
     if not setup_kaggle_api():
         print('Failed to setup Kaggle API. Please check the Kaggle JSON file and try again.')
         return
@@ -49,3 +49,8 @@ def download_kaggle_dataset(dataset_id, local_dir):
     
     else:
         print(f'Data already exists at {local_dir}')
+        
+if __name__ == '__main__':
+    #dataset 이름을 콘솔로 입력 받아서 다운로드 하는 코드 작성
+    dataset_id = input('Enter the dataset ID \n it should be like this: "username/dataset_name": ')
+    download_kaggle_dataset(dataset_id)
