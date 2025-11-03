@@ -17,6 +17,7 @@ from accelerate import Accelerator
 import hydra
 from omegaconf import DictConfig, OmegaConf
 from hydra.utils import instantiate
+from sklearn.metrics import f1_score
 
 @hydra.main(config_path='../configs',config_name='config.yaml',version_base=None)
 def main(cfg: DictConfig):
@@ -65,8 +66,8 @@ def main(cfg: DictConfig):
     for epoch in range(cfg.run.epochs):
         epoch_start = time.time()
         
-        train_loss, train_acc = train(model, optimizer, criterion, train_loader, accelerator, epoch)
-        val_loss, val_acc = val(model, criterion, val_loader, accelerator, epoch)
+        train_loss, train_acc, train_f1 = train(model, optimizer, criterion, train_loader, accelerator, epoch)
+        val_loss, val_acc, val_f1 = val(model, criterion, val_loader, accelerator, epoch)
         scheduler.step()
         
         epoch_time = time.time() - epoch_start
@@ -82,8 +83,8 @@ def main(cfg: DictConfig):
             }, step=epoch)
             
             print(f'\nEpoch {epoch}/{cfg.run.epochs} - {epoch_time:.2f}s - '
-                  f'Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.2f}% - '
-                  f'Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.2f}% - LR: {current_lr:.6f}')
+                  f'Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.2f}%, Train F1: {train_f1:.4f} - '
+                  f'Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.2f}%, Val F1: {val_f1:.4f} - LR: {current_lr:.6f}')
         
         accelerator.wait_for_everyone()
         if accelerator.is_main_process:
@@ -125,6 +126,8 @@ def train(model, optimizer, criterion, train_loader, accelerator, epoch):
     cum_loss = 0.0
     total_samples = 0
     correct = 0
+    all_predictions = []
+    all_targets = []
     
     # Progress bar는 main process에서만 표시
     if accelerator.is_main_process:
@@ -144,6 +147,13 @@ def train(model, optimizer, criterion, train_loader, accelerator, epoch):
         predicted = (outputs.squeeze() > 0).float()
         correct += (predicted == targets).sum().item()
         
+        # F1 score를 위한 예측/타겟 저장
+        all_predictions.extend(predicted.cpu().numpy())
+        all_targets.extend(targets.cpu().numpy())
+        
+        # 현재까지의 F1 score 계산
+        current_f1 = f1_score(all_targets, all_predictions, average='macro', zero_division=0)
+        
         accelerator.backward(loss)
         optimizer.step()
         
@@ -151,7 +161,8 @@ def train(model, optimizer, criterion, train_loader, accelerator, epoch):
         if accelerator.is_main_process:
             pbar.set_postfix({
                 'loss': f'{loss.item():.4f}',
-                'acc': f'{100.0 * correct / total_samples:.2f}%'
+                'acc': f'{100.0 * correct / total_samples:.2f}%',
+                'f1': f'{current_f1:.4f}'
             })
     
     total_loss = torch.tensor(cum_loss, device = accelerator.device)
@@ -165,16 +176,22 @@ def train(model, optimizer, criterion, train_loader, accelerator, epoch):
     avg_loss = total_loss_tensor.item() / total_samples_tensor.item()
     accuracy = 100.0 * total_correct_tensor.item() / total_samples_tensor.item()
     
+    # 최종 F1 score 계산
+    final_f1 = f1_score(all_targets, all_predictions, average='macro', zero_division=0)
+    
     wandb.log({
         'train/loss': avg_loss,
-        'train/accuracy': accuracy}, step=epoch)
-    return avg_loss, accuracy
+        'train/accuracy': accuracy,
+        'train/f1_score': final_f1}, step=epoch)
+    return avg_loss, accuracy, final_f1
         
 def val(model, criterion, val_loader, accelerator, epoch):
     model.eval()
     cum_loss = 0.0
     total_samples = 0
     correct = 0
+    all_predictions = []
+    all_targets = []
     
     # Progress bar는 main process에서만 표시
     if accelerator.is_main_process:
@@ -194,11 +211,19 @@ def val(model, criterion, val_loader, accelerator, epoch):
             predicted = (outputs.squeeze() > 0).float()
             correct += (predicted == targets).sum().item()
             
+            # F1 score를 위한 예측/타겟 저장
+            all_predictions.extend(predicted.cpu().numpy())
+            all_targets.extend(targets.cpu().numpy())
+            
+            # 현재까지의 F1 score 계산
+            current_f1 = f1_score(all_targets, all_predictions, average='macro', zero_division=0)
+            
             # Progress bar 업데이트
             if accelerator.is_main_process:
                 pbar.set_postfix({
                     'loss': f'{loss.item():.4f}',
-                    'acc': f'{100.0 * correct / total_samples:.2f}%'
+                    'acc': f'{100.0 * correct / total_samples:.2f}%',
+                    'f1': f'{current_f1:.4f}'
                 })
             
     total_loss = torch.tensor(cum_loss, device = accelerator.device)
@@ -212,10 +237,14 @@ def val(model, criterion, val_loader, accelerator, epoch):
     avg_loss = total_loss_tensor.item() / total_samples_tensor.item()
     accuracy = 100.0 * total_correct_tensor.item() / total_samples_tensor.item()
     
+    # 최종 F1 score 계산
+    final_f1 = f1_score(all_targets, all_predictions, average='macro', zero_division=0)
+    
     wandb.log({
         'val/loss': avg_loss,
-        'val/accuracy': accuracy}, step=epoch)
-    return avg_loss, accuracy
+        'val/accuracy': accuracy,
+        'val/f1_score': final_f1}, step=epoch)
+    return avg_loss, accuracy, final_f1
 
 
 if __name__ == '__main__':

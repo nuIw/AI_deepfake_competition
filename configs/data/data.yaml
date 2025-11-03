@@ -1,5 +1,5 @@
 path : "/content/data"
-batch_size : 128
+batch_size : 32 #128 코랩에서 안돌아감, 64는 돌아갈듯
 num_workers : 4
 
 train_loader:
