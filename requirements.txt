@@ -529,7 +529,7 @@ ruff==0.14.2
 safehttpx==0.1.7
 safetensors==0.6.2
 scikit-image==0.25.2
-scikit-learn==1.3.2
+scikit-learn>=1.5
 scipy==1.11.4
 scooby==0.10.2
 scs==3.2.9
