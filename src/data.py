@@ -6,6 +6,7 @@ import torch
 import kagglehub
 from torch.utils.data import Dataset, DataLoader
 import torchvision.transforms as transforms
+from torchvision.datasets import ImageFolder
 
 LOCAL_DATA_PATH = '/content/data'
 KAGGLE_JSON_DIR = '/content/drive/MyDrive/Colab Notebooks/kaggle'
@@ -46,8 +47,9 @@ def download_kaggle_dataset(dataset_id, local_dir=LOCAL_DATA_PATH):
     except Exception as e:
         print(f'Failed to download dataset: {e}')
         return
-        
+
 if __name__ == '__main__':
     #dataset 이름을 콘솔로 입력 받아서 다운로드 하는 코드 작성
     dataset_id = input('Enter the dataset ID \n it should be like this: "username/dataset_name": ')
     download_kaggle_dataset(dataset_id)
+    

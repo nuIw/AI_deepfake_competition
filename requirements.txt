@@ -9,3 +9,7 @@ Pillow
 wandb==0.22.2
 kaggle==1.7.4.5
 kagglehub==0.3.13
+accelerate
+hydra-core
+omegaconf
+tqdm

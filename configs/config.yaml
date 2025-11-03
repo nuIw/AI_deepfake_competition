@@ -1,0 +1,17 @@
+defaults:
+-model : freqnet
+-optimizer : adam
+-scheduler : cosine
+-criterion : cross_entropy
+-data : data
+- _self_
+
+seed : 42
+
+wandb:
+  project_name : "MIP-0"
+  entity : 'mip11'
+
+run:
+  epochs : 100
+  

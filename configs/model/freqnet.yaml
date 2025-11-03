@@ -1,0 +1,5 @@
+_target_ : src.networks.freqnet.FreqNet
+name : "freqnet"
+layers : [3, 4]
+num_classes : 1
+zero_init_residual : False
