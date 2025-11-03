@@ -1,0 +1,17 @@
+## 들여쓰기와 공백을 준수하세요
+defaults:
+  - model: freqnet       
+  - optimizer: adam
+  - scheduler: cosine
+  - criterion: cross_entropy
+  - data: data
+  - _self_               
+
+seed: 42
+
+wandb:
+  project_name: "MIP-0"
+  entity: 'dmachine-kyung-hee-university'
+
+run:
+  epochs: 100

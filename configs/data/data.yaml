@@ -1,0 +1,36 @@
+path : "/content/data"
+batch_size : 32 #128 코랩에서 안돌아감, 64는 돌아갈듯
+num_workers : 4
+
+train_loader:
+  _target_ : torch.utils.data.DataLoader
+  dataset :
+    _target_ : torchvision.datasets.ImageFolder
+    root : ${data.path}/train
+    transform :
+      _target_ : torchvision.transforms.Compose
+      transforms :
+        - _target_ : torchvision.transforms.Resize
+          size : [256, 256]
+        - _target_ : torchvision.transforms.RandomHorizontalFlip
+        - _target_ : torchvision.transforms.ToTensor
+  batch_size : ${data.batch_size}
+  shuffle : True
+  num_workers : ${data.num_workers}
+  pin_memory : True
+
+val_loader:
+  _target_ : torch.utils.data.DataLoader
+  dataset :
+    _target_ : torchvision.datasets.ImageFolder
+    root : ${data.path}/val
+    transform :
+      _target_ : torchvision.transforms.Compose
+      transforms :
+        - _target_ : torchvision.transforms.Resize
+          size : [256, 256]
+        - _target_ : torchvision.transforms.ToTensor
+  batch_size : ${data.batch_size}
+  shuffle : False
+  num_workers : ${data.num_workers}
+  pin_memory : True
