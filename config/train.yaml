@@ -5,7 +5,7 @@ entity: "dmachine-kyung-hee-university" # wandb 사용자/팀 이름
 epochs: 100
 
 data:
-  path: "./data"
+  path: "/content/data"
   batch_size: 128
 
 model:

@@ -68,8 +68,8 @@ def main(cfg: DictConfig):
     best_val_loss = float('inf')
     
     for epoch in range(cfg.epochs):
-        train_loss = train(model, optimizer, criterion, train_loader, accelerator, epoch, batch_size)
-        val_loss = val(model, criterion, val_loader, accelerator, epoch, batch_size)
+        train_loss = train(model, optimizer, criterion, train_loader, accelerator, epoch, cfg.data.batch_size)
+        val_loss = val(model, criterion, val_loader, accelerator, epoch, cfg.data.batch_size)
         scheduler.step()
         
         accelerator.wait_for_everyone()

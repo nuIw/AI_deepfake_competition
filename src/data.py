@@ -46,9 +46,6 @@ def download_kaggle_dataset(dataset_id, local_dir=LOCAL_DATA_PATH):
     except Exception as e:
         print(f'Failed to download dataset: {e}')
         return
-    
-    else:
-        print(f'Data already exists at {local_dir}')
         
 if __name__ == '__main__':
     #dataset 이름을 콘솔로 입력 받아서 다운로드 하는 코드 작성
