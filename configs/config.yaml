@@ -3,7 +3,7 @@ defaults:
   - model: freqnet       
   - optimizer: adam
   - scheduler: cosine
-  - criterion: cross_entropy
+  - criterion: f_beta
   - data: data
   - _self_               
 
