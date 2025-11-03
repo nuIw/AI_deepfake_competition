@@ -7,7 +7,7 @@ import kagglehub
 from torch.utils.data import Dataset, DataLoader
 import torchvision.transforms as transforms
 
-LOCAL_DATA_PATH = '/content/drive/MyDrive/Colab Notebooks/data'
+LOCAL_DATA_PATH = '/content/data'
 KAGGLE_JSON_DIR = '/content/drive/MyDrive/Colab Notebooks/kaggle'
 KAGGLE_JSON_PATH = os.path.join(KAGGLE_JSON_DIR, 'kaggle.json')
 
