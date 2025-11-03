@@ -20,11 +20,14 @@ def main(cfg: DictConfig):
     np.random.seed(cfg.seed)
     random.seed(cfg.seed)
     
-    wandb.init(
-        project = cfg.wandb.project_name,
-        entity = cfg.wandb.entity,
-        config = OmegaConf.to_container(cfg, resolve=True)
-    )
+    wandb_kwargs = {
+        'project': cfg.wandb.project_name,
+        'config': OmegaConf.to_container(cfg, resolve=True)
+    }
+    if cfg.wandb.entity is not None:
+        wandb_kwargs['entity'] = cfg.wandb.entity
+    
+    wandb.init(**wandb_kwargs)
     
     accelerator = Accelerator()
     

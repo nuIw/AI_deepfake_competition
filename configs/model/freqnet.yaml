@@ -1,4 +1,4 @@
-_target_ : src.networks.freqnet.FreqNet
+_target_ : networks.freqnet.FreqNet
 name : "freqnet"
 layers : [3, 4]
 num_classes : 1
