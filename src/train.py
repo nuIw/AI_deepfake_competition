@@ -20,6 +20,10 @@ from hydra.utils import instantiate
 
 @hydra.main(config_path='../configs',config_name='config.yaml',version_base=None)
 def main(cfg: DictConfig):
+    # Hydra가 working directory를 바꾸므로 다시 한번 확인
+    if str(src_dir) not in sys.path:
+        sys.path.insert(0, str(src_dir))
+    
     print(f'Python path includes: {src_dir}')
     print(f'Current working directory: {os.getcwd()}')
     print('Training with config:')
