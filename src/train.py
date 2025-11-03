@@ -82,7 +82,7 @@ def main(cfg: DictConfig):
                 print(f'✓ Best loss model saved at epoch {epoch} to {save_path}')
             
             # Best accuracy 기준 저장
-            elif val_acc > best_val_acc:
+            if val_acc > best_val_acc:
                 best_val_acc = val_acc
                 
                 unwrapped_model = accelerator.unwrap_model(model)
@@ -118,12 +118,13 @@ def train(model, optimizer, criterion, train_loader, accelerator, epoch):
     for batch_idx, (inputs, targets) in enumerate(pbar):
         optimizer.zero_grad()
         outputs = model(inputs)
-        loss = criterion(outputs, targets)
+        targets = targets.float()  # BCEWithLogitsLoss requires float targets
+        loss = criterion(outputs.squeeze(), targets)
         cum_loss += loss.item() * inputs.size(0)
         total_samples += inputs.size(0)
         
-        # Accuracy 계산
-        _, predicted = torch.max(outputs, 1)
+        # Accuracy 계산 (Binary classification)
+        predicted = (outputs.squeeze() > 0).float()
         correct += (predicted == targets).sum().item()
         
         accelerator.backward(loss)
@@ -167,12 +168,13 @@ def val(model, criterion, val_loader, accelerator, epoch):
     with torch.no_grad():
         for batch_idx, (inputs, targets) in enumerate(pbar):
             outputs = model(inputs)
-            loss = criterion(outputs, targets)
+            targets = targets.float()  # BCEWithLogitsLoss requires float targets
+            loss = criterion(outputs.squeeze(), targets)
             cum_loss += loss.item() * inputs.size(0)
             total_samples += inputs.size(0)
             
-            # Accuracy 계산
-            _, predicted = torch.max(outputs, 1)
+            # Accuracy 계산 (Binary classification)
+            predicted = (outputs.squeeze() > 0).float()
             correct += (predicted == targets).sum().item()
             
             # Progress bar 업데이트
