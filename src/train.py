@@ -1,3 +1,12 @@
+import os
+import sys
+from pathlib import Path
+
+# src를 Python path에 추가 (모든 import 전에 실행)
+src_dir = Path(__file__).parent.resolve()
+if str(src_dir) not in sys.path:
+    sys.path.insert(0, str(src_dir))
+
 import torch
 import numpy as np
 import random
@@ -7,19 +16,12 @@ from tqdm import tqdm
 from accelerate import Accelerator
 import hydra
 from omegaconf import DictConfig, OmegaConf
-import os
-import sys
-from pathlib import Path
-
-# src를 Python path에 추가
-src_dir = Path(__file__).parent
-if str(src_dir) not in sys.path:
-    sys.path.insert(0, str(src_dir))
-
 from hydra.utils import instantiate
 
 @hydra.main(config_path='../configs',config_name='config.yaml',version_base=None)
 def main(cfg: DictConfig):
+    print(f'Python path includes: {src_dir}')
+    print(f'Current working directory: {os.getcwd()}')
     print('Training with config:')
     print(OmegaConf.to_yaml(cfg))
     if torch.cuda.is_available():
