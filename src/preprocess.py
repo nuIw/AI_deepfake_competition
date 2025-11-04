@@ -90,6 +90,22 @@ def main(cfg: DictConfig):
         raw_path = raw_artifact.download()
         print(f"✓ Raw 데이터셋 다운로드 완료: {raw_path}")
         
+        # 디렉토리 구조 확인
+        print(f"\n📁 Artifact 디렉토리 구조:")
+        try:
+            top_level_items = os.listdir(raw_path)
+            print(f"   최상위 디렉토리 내용: {top_level_items}")
+            for item in top_level_items:
+                item_path = os.path.join(raw_path, item)
+                if os.path.isdir(item_path):
+                    try:
+                        sub_items = os.listdir(item_path)
+                        print(f"   {item}/ → {sub_items[:5]}{'...' if len(sub_items) > 5 else ''} (총 {len(sub_items)}개)")
+                    except:
+                        pass
+        except Exception as e:
+            print(f"   ⚠ 디렉토리 구조 확인 실패: {e}")
+        
         # 2. 전처리 파이프라인 정의 (Hydra instantiate 사용)
         print(f"\n2. 전처리 파이프라인 정의")
         preprocessing_transform = instantiate(cfg.preprocess.transform)
@@ -124,8 +140,43 @@ def main(cfg: DictConfig):
             print(f"[{split.upper()}] 전처리 시작")
             print(f"{'='*50}")
             
+            # 디렉토리 내용 확인
+            try:
+                contents = os.listdir(split_path)
+                print(f"✓ 디렉토리 내용: {contents}")
+                
+                # class 폴더가 있는지 확인
+                subdirs = [d for d in contents if os.path.isdir(os.path.join(split_path, d))]
+                if not subdirs:
+                    print(f"\n⚠ 경고: [{split}] 디렉토리에 클래스 폴더가 없습니다: {split_path}")
+                    print(f"   ImageFolder는 다음 구조를 필요로 합니다:")
+                    print(f"   {split}/")
+                    print(f"     ├── class1/")
+                    print(f"     │   ├── img1.jpg")
+                    print(f"     │   └── img2.jpg")
+                    print(f"     └── class2/")
+                    print(f"         └── img3.jpg")
+                    print(f"\n   실제 구조:")
+                    print(f"   {split}/")
+                    for item in contents[:10]:  # 처음 10개만 표시
+                        print(f"     ├── {item}")
+                    if len(contents) > 10:
+                        print(f"     └── ... (총 {len(contents)}개 항목)")
+                    print(f"\n   [{split}] 스킵합니다.")
+                    continue
+                    
+            except Exception as e:
+                print(f"⚠ 경고: 디렉토리 읽기 실패: {e}")
+                continue
+            
             # ImageFolder로 로드
-            dataset = ImageFolder(root=split_path, transform=None)
+            try:
+                dataset = ImageFolder(root=split_path, transform=None)
+            except FileNotFoundError as e:
+                print(f"\n❌ 에러: ImageFolder 로드 실패")
+                print(f"   {e}")
+                print(f"   [{split}] 스킵합니다.")
+                continue
             print(f"✓ {len(dataset)}개의 이미지 로드")
             print(f"✓ 클래스: {dataset.classes}")
             all_classes.update(dataset.classes)
