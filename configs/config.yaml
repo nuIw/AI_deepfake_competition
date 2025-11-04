@@ -9,9 +9,14 @@ defaults:
 
 seed: 42
 
+exp_name: "baseline"  # 실험명: baseline, augmentation, architecture_test 등
+
 wandb:
   project_name: "MIP-0"
   entity: 'dmachine-kyung-hee-university'
+
+checkpoint:
+  save_dir: "/content/drive/MyDrive/Models/checkpoints"  # 구글 드라이브 경로
 
 run:
   epochs: 100
