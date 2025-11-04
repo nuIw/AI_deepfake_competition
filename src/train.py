@@ -50,6 +50,20 @@ def main(cfg: DictConfig):
     model = instantiate(cfg.model)
     model_name = cfg.model.name  # name 접근
     
+    # 체크포인트 디렉토리 생성: 모델명/실험명/run이름
+    checkpoint_base = cfg.checkpoint.save_dir
+    checkpoint_dir = os.path.join(
+        checkpoint_base,
+        model_name,           # freqnet
+        cfg.exp_name,         # baseline
+        wandb.run.name        
+    )
+    os.makedirs(checkpoint_dir, exist_ok=True)
+    print(f'Checkpoint directory: {checkpoint_dir}')
+    print(f'  Model: {model_name}')
+    print(f'  Experiment: {cfg.exp_name}')
+    print(f'  Run: {wandb.run.name}')
+    
     optimizer = instantiate(cfg.optimizer, params=model.parameters())
     scheduler = instantiate(cfg.scheduler, optimizer=optimizer)
     criterion = instantiate(cfg.criterion)
@@ -96,30 +110,36 @@ def main(cfg: DictConfig):
                 best_val_loss = val_loss
                 
                 unwrapped_model = accelerator.unwrap_model(model)
-                save_dir = wandb.run.dir
-                save_path = os.path.join(save_dir, f'{cfg.model.name}_epoch{epoch}_best_loss.pth')
+                save_path = os.path.join(checkpoint_dir, f'{model_name}_epoch{epoch}_best_loss.pth')
                 
                 torch.save(unwrapped_model.state_dict(), save_path)
                 print(f'✓ Best loss model saved at epoch {epoch} to {save_path}')
+                
+                # wandb에도 업로드
+                wandb.save(save_path)
             
             # Best accuracy 기준 저장
             if val_acc > best_val_acc:
                 best_val_acc = val_acc
                 
                 unwrapped_model = accelerator.unwrap_model(model)
-                save_dir = wandb.run.dir
-                save_path = os.path.join(save_dir, f'{cfg.model.name}_epoch{epoch}_best_acc.pth')
+                save_path = os.path.join(checkpoint_dir, f'{model_name}_epoch{epoch}_best_acc.pth')
                 
                 torch.save(unwrapped_model.state_dict(), save_path)
                 print(f'✓ Best accuracy model saved at epoch {epoch} to {save_path}')
+                
+                # wandb에도 업로드
+                wandb.save(save_path)
     
     # 최종 모델 저장
     if accelerator.is_main_process:
         unwrapped_model = accelerator.unwrap_model(model)
-        save_dir = wandb.run.dir
-        save_path = os.path.join(save_dir, f'{cfg.model.name}_final.pth')
+        save_path = os.path.join(checkpoint_dir, f'{model_name}_final.pth')
         torch.save(unwrapped_model.state_dict(), save_path)
         print(f'✓ Final model saved to {save_path}')
+        
+        # wandb에도 업로드
+        wandb.save(save_path)
         
         wandb.finish()
     
