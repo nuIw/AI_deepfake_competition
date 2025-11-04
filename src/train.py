@@ -35,14 +35,8 @@ def main(cfg: DictConfig):
     np.random.seed(cfg.seed)
     random.seed(cfg.seed)
     
-    wandb_kwargs = {
-        'project': cfg.wandb.project_name,
-        'config': OmegaConf.to_container(cfg, resolve=True)
-    }
-    if cfg.wandb.entity is not None:
-        wandb_kwargs['entity'] = cfg.wandb.entity
-    
-    wandb.init(**wandb_kwargs)
+    wandb.init(project=cfg.wandb.project_name, entity=cfg.wandb.entity, 
+               config=OmegaConf.to_container(cfg, resolve=True,throw_on_missing=True))
     
     accelerator = Accelerator()
     
@@ -174,18 +168,14 @@ def train(model, optimizer, criterion, train_loader, accelerator, epoch):
         all_predictions.extend(predicted.cpu().numpy())
         all_targets.extend(targets.cpu().numpy())
         
-        # 현재까지의 F1 score 계산
-        current_f1 = f1_score(all_targets, all_predictions, average='macro', zero_division=0)
-        
         accelerator.backward(loss)
         optimizer.step()
         
-        # Progress bar 업데이트
+        # Progress bar 업데이트 (누적 평균 loss와 accuracy만 표시)
         if accelerator.is_main_process:
             pbar.set_postfix({
-                'loss': f'{loss.item():.4f}',
-                'acc': f'{100.0 * correct / total_samples:.2f}%',
-                'f1': f'{current_f1:.4f}'
+                'loss': f'{cum_loss / total_samples:.4f}',
+                'acc': f'{100.0 * correct / total_samples:.2f}%'
             })
     
     total_loss = torch.tensor(cum_loss, device = accelerator.device)
@@ -199,8 +189,19 @@ def train(model, optimizer, criterion, train_loader, accelerator, epoch):
     avg_loss = total_loss_tensor.item() / total_samples_tensor.item()
     accuracy = 100.0 * total_correct_tensor.item() / total_samples_tensor.item()
     
-    # 최종 F1 score 계산
-    final_f1 = f1_score(all_targets, all_predictions, average='macro', zero_division=0)
+    # 최종 F1 score 계산 (Multi-GPU 고려)
+    all_predictions_tensor = torch.tensor(all_predictions, device=accelerator.device)
+    all_targets_tensor = torch.tensor(all_targets, device=accelerator.device)
+    
+    all_predictions_gathered = accelerator.gather_for_metrics(all_predictions_tensor)
+    all_targets_gathered = accelerator.gather_for_metrics(all_targets_tensor)
+    
+    final_f1 = f1_score(
+        all_targets_gathered.cpu().numpy(), 
+        all_predictions_gathered.cpu().numpy(), 
+        average='macro',  # 두 클래스(0, 1) 평균
+        zero_division=0
+    )
     
     wandb.log({
         'train/loss': avg_loss,
@@ -238,15 +239,11 @@ def val(model, criterion, val_loader, accelerator, epoch):
             all_predictions.extend(predicted.cpu().numpy())
             all_targets.extend(targets.cpu().numpy())
             
-            # 현재까지의 F1 score 계산
-            current_f1 = f1_score(all_targets, all_predictions, average='macro', zero_division=0)
-            
-            # Progress bar 업데이트
+            # Progress bar 업데이트 (누적 평균 loss와 accuracy만 표시)
             if accelerator.is_main_process:
                 pbar.set_postfix({
-                    'loss': f'{loss.item():.4f}',
-                    'acc': f'{100.0 * correct / total_samples:.2f}%',
-                    'f1': f'{current_f1:.4f}'
+                    'loss': f'{cum_loss / total_samples:.4f}',
+                    'acc': f'{100.0 * correct / total_samples:.2f}%'
                 })
             
     total_loss = torch.tensor(cum_loss, device = accelerator.device)
@@ -260,8 +257,19 @@ def val(model, criterion, val_loader, accelerator, epoch):
     avg_loss = total_loss_tensor.item() / total_samples_tensor.item()
     accuracy = 100.0 * total_correct_tensor.item() / total_samples_tensor.item()
     
-    # 최종 F1 score 계산
-    final_f1 = f1_score(all_targets, all_predictions, average='macro', zero_division=0)
+    # 최종 F1 score 계산 (Multi-GPU 고려)
+    all_predictions_tensor = torch.tensor(all_predictions, device=accelerator.device)
+    all_targets_tensor = torch.tensor(all_targets, device=accelerator.device)
+    
+    all_predictions_gathered = accelerator.gather_for_metrics(all_predictions_tensor)
+    all_targets_gathered = accelerator.gather_for_metrics(all_targets_tensor)
+    
+    final_f1 = f1_score(
+        all_targets_gathered.cpu().numpy(), 
+        all_predictions_gathered.cpu().numpy(), 
+        average='macro',  # 두 클래스(0, 1) 평균
+        zero_division=0
+    )
     
     wandb.log({
         'val/loss': avg_loss,

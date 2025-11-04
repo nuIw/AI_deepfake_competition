@@ -1,0 +1,55 @@
+# WandB Sweep Configuration
+# CLI 사용법:
+#   1. wandb sweep configs/sweep.yaml
+#   2. wandb agent <sweep_id>
+
+project: MIP-0
+entity: dmachine-kyung-hee-university
+exp_name : sweep
+
+program: src/train.py
+method: bayes  # bayes, grid, random
+metric:
+  name: val/f1_score  # 최적화할 metric
+  goal: maximize      # maximize 또는 minimize
+
+# Hydra CLI override를 위한 command 설정
+command:
+  - ${env}
+  - python
+  - ${program}
+  - ${args_no_hyphens}
+
+parameters:
+  # Optimizer
+  optimizer.lr:
+    distribution: log_uniform_values
+    min: 0.0001
+    max: 0.01
+  
+  optimizer.weight_decay:
+    values: [1e-5, 1e-4, 1e-3]
+  
+  # Data
+  data.batch_size:
+    values: [32, 64]
+  
+  # Scheduler
+  scheduler.eta_min:
+    values: [0, 1e-6, 1e-5]
+  
+  # Model (고정값)
+  model:
+    value: freqnet
+
+  # run
+  run.epochs:
+    value: 15
+
+# Early stopping
+early_terminate:
+  type: hyperband
+  min_iter: 5  # 최소 5 epoch는 실행
+  eta: 2
+  s: 2
+
