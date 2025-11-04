@@ -5,6 +5,7 @@
 
 project: MIP-0
 entity: dmachine-kyung-hee-university
+exp_name: sweep
 
 program: src/train.py
 method: bayes  # bayes, grid, random
