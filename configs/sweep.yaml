@@ -3,6 +3,9 @@
 #   1. wandb sweep configs/sweep.yaml
 #   2. wandb agent <sweep_id>
 
+project: MIP-0
+entity: dmachine-kyung-hee-university
+
 program: src/train.py
 method: bayes  # bayes, grid, random
 metric:
