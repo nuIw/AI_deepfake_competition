@@ -41,7 +41,7 @@ def main(cfg: DictConfig):
     accelerator = Accelerator()
     
     # model instantiate (name은 **kwargs로 자동 무시됨)
-    model = instantiate(cfg.model)ㄴㄴ
+    model = instantiate(cfg.model)
     model_name = cfg.model.name  # name 접근
     
     # 체크포인트 디렉토리 생성: 모델명/실험명/run이름
