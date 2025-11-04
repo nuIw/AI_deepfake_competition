@@ -1,0 +1,44 @@
+# WandB Sweep Configuration
+program: src/train.py
+method: bayes  # bayes, grid, random
+metric:
+  name: val/f1_score  # 최적화할 metric
+  goal: maximize      # maximize 또는 minimize
+
+parameters:
+  # Optimizer
+  optimizer.lr:
+    distribution: log_uniform_values
+    min: 0.0001
+    max: 0.01
+  
+  optimizer.weight_decay:
+    values: [1e-5, 1e-4, 1e-3]
+  
+  # Data
+  data.batch_size:
+    values: [32, 64]
+  
+  # Scheduler
+  scheduler.eta_min:
+    values: [0, 1e-6, 1e-5]
+  
+  # Model (고정값)
+  model:
+    value: freqnet
+  
+  # Experiment name (고정값)
+  exp_name:
+    value: "sweep_baseline"
+
+  # run
+  run.epochs:
+    value: 1  # values가 아니라 value (고정값)
+
+# Early stopping
+early_terminate:
+  type: hyperband
+  min_iter: 10
+  eta: 2
+  s: 2
+
