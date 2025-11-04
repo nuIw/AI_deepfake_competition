@@ -9,11 +9,12 @@ wandb:
 artifact:
   # 입력 Raw Artifact
   raw_artifact_name: "raw-dataset:latest"  # 사용할 raw artifact 이름 (예: "raw-dataset:v0" 또는 "raw-dataset:latest")
-  raw_artifact_type: "raw_data"
+  raw_artifact_type: "raw"
   
   # 출력 Processed Artifact
-  processed_artifact_name: "processed-dataset"  # 생성할 processed artifact 이름
-  processed_artifact_type: "dataset"
+  # processed_artifact_name은 자동 생성됨: "P-" + raw_artifact_name (버전 제외)
+  # 예: raw_artifact_name이 "raw-dataset:latest"이면 -> "P-raw-dataset"
+  processed_artifact_type: "preprocessed"
   description: "Preprocessed dataset with resized images"
 
 # 전처리 설정

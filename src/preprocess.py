@@ -7,6 +7,7 @@ wandb Artifact를 사용하여 raw 데이터셋을 로드하고 전처리한 후
 
 import os
 import sys
+import argparse
 from pathlib import Path
 
 # src를 Python path에 추가
@@ -23,6 +24,36 @@ from torchvision import transforms
 from tqdm import tqdm
 
 
+def parse_custom_args():
+    """커스텀 CLI 인자를 파싱하여 Hydra 형식으로 변환"""
+    parser = argparse.ArgumentParser(description='데이터 전처리 스크립트', add_help=False)
+    parser.add_argument('-raw', '--raw', type=str, 
+                       help='Raw artifact 이름 (예: my-dataset:latest 또는 my-dataset)')
+    parser.add_argument('-h', '--help', action='store_true', 
+                       help='도움말 표시')
+    
+    # 알려진 인자만 파싱 (나머지는 Hydra에게 전달)
+    args, remaining = parser.parse_known_args()
+    
+    if args.help:
+        parser.print_help()
+        print("\n사용 예시:")
+        print("  python src/preprocess.py -raw my-dataset:latest")
+        print("  python src/preprocess.py -raw my-dataset:v0")
+        print("  python src/preprocess.py  # 설정 파일의 기본값 사용")
+        print("\nHydra 옵션도 사용 가능:")
+        print("  python src/preprocess.py artifact.raw_artifact_name=my-dataset:latest")
+        sys.exit(0)
+    
+    # -raw 인자를 Hydra 형식으로 변환
+    hydra_args = []
+    if args.raw:
+        hydra_args.append(f'artifact.raw_artifact_name={args.raw}')
+    
+    # 나머지 인자들과 결합
+    return hydra_args + remaining
+
+
 @hydra.main(config_path='../configs', config_name='preprocess.yaml', version_base=None)
 def main(cfg: DictConfig):
     """전처리 메인 함수"""
@@ -30,6 +61,17 @@ def main(cfg: DictConfig):
     print('전처리 시작')
     print('Configuration:')
     print(OmegaConf.to_yaml(cfg))
+    
+    # processed artifact name을 raw artifact name 기반으로 자동 생성
+    raw_artifact_name = cfg.artifact.raw_artifact_name
+    # 버전 정보 분리 (예: "raw-dataset:latest" -> "raw-dataset", ":latest")
+    if ':' in raw_artifact_name:
+        base_name, version = raw_artifact_name.split(':', 1)
+        processed_artifact_name = f"P-{base_name}"
+    else:
+        processed_artifact_name = f"P-{raw_artifact_name}"
+    
+    print(f"\n자동 생성된 Processed Artifact 이름: {processed_artifact_name}")
     
     # wandb 초기화 (job_type을 preprocess로 설정)
     with wandb.init(
@@ -40,9 +82,9 @@ def main(cfg: DictConfig):
     ) as run:
         
         # 1. Raw Dataset Artifact 로드
-        print(f"\n1. Raw Dataset Artifact 로드: {cfg.artifact.raw_artifact_name}")
+        print(f"\n1. Raw Dataset Artifact 로드: {raw_artifact_name}")
         raw_artifact = run.use_artifact(
-            cfg.artifact.raw_artifact_name, 
+            raw_artifact_name, 
             type=cfg.artifact.raw_artifact_type
         )
         raw_path = raw_artifact.download()
@@ -129,7 +171,7 @@ def main(cfg: DictConfig):
         transform_info = [t.__class__.__name__ for t in preprocessing_transform.transforms]
         
         processed_artifact = wandb.Artifact(
-            name=cfg.artifact.processed_artifact_name,
+            name=processed_artifact_name,
             type=cfg.artifact.processed_artifact_type,
             description=cfg.artifact.description,
             metadata={
@@ -137,7 +179,7 @@ def main(cfg: DictConfig):
                 "num_images": total_images,
                 "classes": sorted(all_classes),
                 "splits": splits,
-                "raw_artifact": cfg.artifact.raw_artifact_name
+                "raw_artifact": raw_artifact_name
             }
         )
         
@@ -147,10 +189,13 @@ def main(cfg: DictConfig):
         # Artifact 로깅
         run.log_artifact(processed_artifact)
         
-        print(f"✓ Artifact '{cfg.artifact.processed_artifact_name}' 업로드 완료")
+        print(f"✓ Artifact '{processed_artifact_name}' 업로드 완료")
         print(f"\n전처리 완료!")
 
 
 if __name__ == '__main__':
+    # 커스텀 CLI 인자를 Hydra 형식으로 변환
+    hydra_args = parse_custom_args()
+    sys.argv = [sys.argv[0]] + hydra_args
     main()
 
