@@ -1,9 +1,20 @@
 # WandB Sweep Configuration
+# CLI 사용법:
+#   1. wandb sweep configs/sweep.yaml
+#   2. wandb agent <sweep_id>
+
 program: src/train.py
 method: bayes  # bayes, grid, random
 metric:
   name: val/f1_score  # 최적화할 metric
   goal: maximize      # maximize 또는 minimize
+
+# Hydra CLI override를 위한 command 설정
+command:
+  - ${env}
+  - python
+  - ${program}
+  - ${args_no_hyphens}
 
 parameters:
   # Optimizer

@@ -35,19 +35,13 @@ def main(cfg: DictConfig):
     np.random.seed(cfg.seed)
     random.seed(cfg.seed)
     
-    wandb_kwargs = {
-        'project': cfg.wandb.project_name,
-        'config': OmegaConf.to_container(cfg, resolve=True)
-    }
-    if cfg.wandb.entity is not None:
-        wandb_kwargs['entity'] = cfg.wandb.entity
-    
-    wandb.init(**wandb_kwargs)
+    wandb.init(project=cfg.wandb.project_name, entity=cfg.wandb.entity, 
+               config=OmegaConf.to_container(cfg, resolve=True,throw_on_missing=True))
     
     accelerator = Accelerator()
     
     # model instantiate (name은 **kwargs로 자동 무시됨)
-    model = instantiate(cfg.model)
+    model = instantiate(cfg.model)ㄴㄴ
     model_name = cfg.model.name  # name 접근
     
     # 체크포인트 디렉토리 생성: 모델명/실험명/run이름
