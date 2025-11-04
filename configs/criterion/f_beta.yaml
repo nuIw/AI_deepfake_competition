@@ -1,0 +1,4 @@
+_target_ : losses.fbeta.FBetaLoss
+beta : 1.0
+eps : 1e-7
+reduce : mean
