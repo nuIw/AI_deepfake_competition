@@ -5,7 +5,7 @@
 
 project: MIP-0
 entity: dmachine-kyung-hee-university
-exp_name: sweep
+exp_name : sweep
 
 program: src/train.py
 method: bayes  # bayes, grid, random
@@ -41,19 +41,15 @@ parameters:
   # Model (고정값)
   model:
     value: freqnet
-  
-  # Experiment name (고정값)
-  exp_name:
-    value: "sweep_baseline"
 
   # run
   run.epochs:
-    value: 1  # values가 아니라 value (고정값)
+    value: 15
 
 # Early stopping
 early_terminate:
   type: hyperband
-  min_iter: 10
+  min_iter: 5  # 최소 5 epoch는 실행
   eta: 2
   s: 2
 
