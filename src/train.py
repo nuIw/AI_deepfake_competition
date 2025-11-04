@@ -35,7 +35,7 @@ def main(cfg: DictConfig):
     np.random.seed(cfg.seed)
     random.seed(cfg.seed)
     
-    wandb.init(project=cfg.wandb.project_name, entity=cfg.wandb.entity, 
+    run = wandb.init(project=cfg.wandb.project_name, entity=cfg.wandb.entity, 
                config=OmegaConf.to_container(cfg, resolve=True,throw_on_missing=True))
     
     accelerator = Accelerator()

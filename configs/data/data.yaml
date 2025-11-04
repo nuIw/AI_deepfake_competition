@@ -10,8 +10,6 @@ train_loader:
     transform :
       _target_ : torchvision.transforms.Compose
       transforms :
-        - _target_ : torchvision.transforms.Resize
-          size : [256, 256]
         - _target_ : torchvision.transforms.RandomHorizontalFlip
         - _target_ : torchvision.transforms.ToTensor
   batch_size : ${data.batch_size}
@@ -27,8 +25,6 @@ val_loader:
     transform :
       _target_ : torchvision.transforms.Compose
       transforms :
-        - _target_ : torchvision.transforms.Resize
-          size : [256, 256]
         - _target_ : torchvision.transforms.ToTensor
   batch_size : ${data.batch_size}
   shuffle : False

@@ -1,119 +1,51 @@
-# wandb Artifact Manager
-
-wandb Artifact를 사용하여 데이터셋을 효과적으로 관리하는 도구입니다.
-
 ## 기능
 
 1. **새 아티팩트 생성**: 디렉토리를 아티팩트로 저장
 2. **아티팩트 확장**: 기존 아티팩트에 새 데이터를 추가하여 새 버전 생성
 3. **아티팩트 다운로드**: 저장된 아티팩트를 로컬로 다운로드
 
-## 설치
-
-```bash
-pip install wandb
-```
-
 ## 사용법
 
-### 1. Python API 사용
-
-#### 예제 1: 새 아티팩트 생성
-
-```python
-from src.artifact_manager import ArtifactManager
-
-# ArtifactManager 초기화
-manager = ArtifactManager(
-    project_name="my-project",
-    entity="my-team"  # 선택사항
-)
-
-# 새 아티팩트 생성
-artifact = manager.create_artifact(
-    artifact_name="dataset-v1",
-    artifact_type="dataset",
-    directory_path="./data/raw",
-    description="Initial raw dataset",
-    metadata={"samples": 1000, "version": "1.0"}
-)
-
-# wandb run 종료
-manager.finish()
-```
-
-#### 예제 2: 기존 아티팩트 확장
-
-```python
-from src.artifact_manager import ArtifactManager
-
-manager = ArtifactManager(project_name="my-project")
-
-# 기존 아티팩트에 새 데이터 추가
-artifact = manager.extend_artifact(
-    base_artifact_name="dataset-v1:latest",  # 또는 "dataset-v1:v0"
-    new_artifact_name="dataset-v2",
-    directory_path="./data/additional",
-    description="Extended with additional data"
-)
-
-manager.finish()
-```
-
-#### 예제 3: 아티팩트 다운로드
-
-```python
-from src.artifact_manager import ArtifactManager
-
-manager = ArtifactManager(project_name="my-project")
-
-# 아티팩트 다운로드
-saved_path = manager.download_artifact(
-    artifact_name="dataset-v2:latest",
-    download_path="./data/downloaded"
-)
-
-print(f"Downloaded to: {saved_path}")
-manager.finish()
-```
-
-### 2. CLI 사용
+### CLI 사용 (Colab에서)
 
 #### 새 아티팩트 생성
 
 ```bash
-python src/artifact_manager.py \
-    --project my-project \
-    --entity my-team \
+%cd /content/MIP-team11
+!python src/artifact_manager.py \
+    --project MIP-0 \
+    --entity dmachine-kyung-hee-university \
     create \
     --name dataset-v1 \
     --type dataset \
-    --dir ./data/raw \
+    --dir /cotnet/data \
     --description "Initial dataset"
 ```
 
 #### 기존 아티팩트 확장
 
 ```bash
-python src/artifact_manager.py \
-    --project my-project \
-    --entity my-team \
+%cd /content/MIP-team11
+!python src/artifact_manager.py \
+    --project MIP-0 \
+    --entity dmachine-kyung-hee-university \
     extend \
     --base dataset-v1:latest \
     --name dataset-v2 \
-    --dir ./data/additional \
+    --dir /cotnet/data/additional \
     --description "Extended dataset"
 ```
 
 #### 아티팩트 다운로드
 
 ```bash
+%cd /content/MIP-team11
 python src/artifact_manager.py \
-    --project my-project \
-    --entity my-team \
+    --project MIP-0 \
+    --entity dmachine-kyung-hee-university \
     download \
     --name dataset-v2:latest \
-    --path ./data/downloaded
+    --path /content/data
 ```
 
 ## 주요 매개변수
