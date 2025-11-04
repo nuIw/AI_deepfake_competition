@@ -47,11 +47,17 @@ def main(cfg: DictConfig):
     model_artifact = wandb.Artifact(name=model_name, type='model',
                                     metadata=OmegaConf.to_container(cfg, resolve=True,throw_on_missing=True))
        
+    # Artifact 다운로드 및 경로 업데이트
     dataset_artifact = run.use_artifact(cfg.data.processed_artifact)
     dataset_dir = dataset_artifact.download()
     
-    train_loader = instantiate(cfg.data.train_loader, dataset_dir=dataset_dir)
-    val_loader = instantiate(cfg.data.val_loader, dataset_dir=dataset_dir)
+    # cfg.data.path를 artifact 다운로드 경로로 업데이트
+    # OmegaConf.set_struct(cfg, False)로 수정 가능하게 변경
+    OmegaConf.set_struct(cfg, False)
+    cfg.data.path = dataset_dir
+    OmegaConf.set_struct(cfg, True)
+    
+    print(f'Dataset path updated to: {cfg.data.path}')
     
     # 체크포인트 디렉토리 생성: 모델명/실험명/run이름
     checkpoint_base = cfg.checkpoint.save_dir

@@ -23,7 +23,7 @@ preprocess:
   output_dir: "./processed_data_output"
   
   # 전처리할 split 목록 (raw 데이터에 train, val, test 폴더가 있으면 각각 전처리)
-  splits: ["train", "val", "test"]
+  splits: ["train", "val"]  # test는 필요없어서 제외
   
   # 전처리 Transform 파이프라인 (Hydra instantiate 사용)
   transform:
