@@ -211,7 +211,7 @@ python preprocess.py artifact.raw_artifact_name="raw-dataset:production"
 
 ```bash
 # 1. Raw 데이터를 artifact로 업로드 (이미 완료된 경우 스킵)
-python artifact_manager.py --project MIP-0 --entity dmachine-kyung-hee-university \
+python raw.py --project MIP-0 --entity dmachine-kyung-hee-university \
   create --name raw-dataset --type raw_data --dir ./raw_data
 
 # 2. 전처리 실행

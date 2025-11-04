@@ -12,7 +12,7 @@
 
 ```bash
 %cd /content/MIP-team11
-!python src/artifact_manager.py \
+!python src/raw.py \
     --project MIP-0 \
     --entity dmachine-kyung-hee-university \
     create \
@@ -26,7 +26,7 @@
 
 ```bash
 %cd /content/MIP-team11
-!python src/artifact_manager.py \
+!python src/raw.py \
     --project MIP-0 \
     --entity dmachine-kyung-hee-university \
     extend \
@@ -40,7 +40,7 @@
 
 ```bash
 %cd /content/MIP-team11
-python src/artifact_manager.py \
+python src/raw.py \
     --project MIP-0 \
     --entity dmachine-kyung-hee-university \
     download \
@@ -99,7 +99,7 @@ artifact = manager.download_artifact("dataset:v0", "./data")
 ### 데이터셋 점진적 구축
 
 ```python
-from src.artifact_manager import ArtifactManager
+from src.raw import ArtifactManager
 
 # 1. 초기 데이터셋 생성
 manager = ArtifactManager(project_name="deepfake-detection")
