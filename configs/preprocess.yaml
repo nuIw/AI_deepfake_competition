@@ -1,0 +1,36 @@
+# 전처리 설정 파일
+
+# wandb 설정
+wandb:
+  project_name: "MIP-0"
+  entity: 'dmachine-kyung-hee-university'
+
+# Artifact 관련 설정
+artifact:
+  # 입력 Raw Artifact
+  raw_artifact_name: "raw-dataset:latest"  # 사용할 raw artifact 이름 (예: "raw-dataset:v0" 또는 "raw-dataset:latest")
+  raw_artifact_type: "raw"
+  
+  # 출력 Processed Artifact
+  # processed_artifact_name은 자동 생성됨: "P-" + raw_artifact_name (버전 제외)
+  # 예: raw_artifact_name이 "raw-dataset:latest"이면 -> "P-raw-dataset"
+  processed_artifact_type: "preprocessed"
+  description: "Preprocessed dataset with resized images"
+
+# 전처리 설정
+preprocess:
+  # 출력 디렉토리
+  output_dir: "./processed_data_output"
+  
+  # 전처리할 split 목록 (raw 데이터에 train, val, test 폴더가 있으면 각각 전처리)
+  splits: ["train", "val"]  # test는 필요없어서 제외
+  
+  # 전처리 Transform 파이프라인 (Hydra instantiate 사용)
+  transform:
+    _target_: torchvision.transforms.Compose
+    transforms:
+      - _target_: torchvision.transforms.Resize
+        size: [256, 256]
+      - _target_: torchvision.transforms.ToTensor
+      - _target_: torchvision.transforms.ToPILImage
+

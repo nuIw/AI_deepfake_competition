@@ -1,36 +1,38 @@
-path : "/content/data"
-batch_size : 32 #128 코랩에서 안돌아감, 64는 돌아갈듯
+# 데이터셋 경로 (artifact 다운로드 시 자동으로 업데이트됨)
+path : "/content/data"  # 기본값 (artifact 사용 시 자동 덮어쓰기)
+
+# Processed artifact 이름
+# CLI에서 override 가능: data.processed_artifact=P-my-dataset:latest
+processed_artifact : "P-raw-dataset:latest"
+
+batch_size : 64 #128 코랩에서 안돌아감, 64는 돌아갈듯
 num_workers : 4
 
 train_loader:
-  _target_ : torch.utils.data.DataLoader
-  dataset :
-    _target_ : torchvision.datasets.ImageFolder
-    root : ${data.path}/train
-    transform :
-      _target_ : torchvision.transforms.Compose
-      transforms :
-        - _target_ : torchvision.transforms.Resize
-          size : [256, 256]
-        - _target_ : torchvision.transforms.RandomHorizontalFlip
-        - _target_ : torchvision.transforms.ToTensor
-  batch_size : ${data.batch_size}
-  shuffle : True
-  num_workers : ${data.num_workers}
-  pin_memory : True
+  _target_: torch.utils.data.DataLoader
+  dataset:
+    _target_: torchvision.datasets.ImageFolder
+    root: ${data.path}/train
+    transform:
+      _target_: torchvision.transforms.Compose
+      transforms:
+        - _target_: torchvision.transforms.RandomHorizontalFlip
+        - _target_: torchvision.transforms.ToTensor
+  batch_size: ${data.batch_size}
+  shuffle: True
+  num_workers: ${data.num_workers}
+  pin_memory: True
 
 val_loader:
-  _target_ : torch.utils.data.DataLoader
-  dataset :
-    _target_ : torchvision.datasets.ImageFolder
-    root : ${data.path}/val
-    transform :
-      _target_ : torchvision.transforms.Compose
-      transforms :
-        - _target_ : torchvision.transforms.Resize
-          size : [256, 256]
-        - _target_ : torchvision.transforms.ToTensor
-  batch_size : ${data.batch_size}
-  shuffle : False
-  num_workers : ${data.num_workers}
-  pin_memory : True
+  _target_: torch.utils.data.DataLoader
+  dataset:
+    _target_: torchvision.datasets.ImageFolder
+    root: ${data.path}/val
+    transform:
+      _target_: torchvision.transforms.Compose
+      transforms:
+        - _target_: torchvision.transforms.ToTensor
+  batch_size: ${data.batch_size}
+  shuffle: False
+  num_workers: ${data.num_workers}
+  pin_memory: True

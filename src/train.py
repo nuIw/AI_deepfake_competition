@@ -35,7 +35,7 @@ def main(cfg: DictConfig):
     np.random.seed(cfg.seed)
     random.seed(cfg.seed)
     
-    wandb.init(project=cfg.wandb.project_name, entity=cfg.wandb.entity, 
+    run = wandb.init(project=cfg.wandb.project_name, entity=cfg.wandb.entity, 
                config=OmegaConf.to_container(cfg, resolve=True,throw_on_missing=True))
     
     accelerator = Accelerator()
@@ -44,19 +44,34 @@ def main(cfg: DictConfig):
     model = instantiate(cfg.model)
     model_name = cfg.model.name  # name 접근
     
+    model_artifact = wandb.Artifact(name=model_name, type='model',
+                                    metadata=OmegaConf.to_container(cfg, resolve=True,throw_on_missing=True))
+       
+    # Artifact 다운로드 및 경로 업데이트
+    dataset_artifact = run.use_artifact(cfg.data.processed_artifact)
+    dataset_dir = dataset_artifact.download()
+    
+    # cfg.data.path를 artifact 다운로드 경로로 업데이트
+    # OmegaConf.set_struct(cfg, False)로 수정 가능하게 변경
+    OmegaConf.set_struct(cfg, False)
+    cfg.data.path = dataset_dir
+    OmegaConf.set_struct(cfg, True)
+    
+    print(f'Dataset path updated to: {cfg.data.path}')
+    
     # 체크포인트 디렉토리 생성: 모델명/실험명/run이름
     checkpoint_base = cfg.checkpoint.save_dir
     checkpoint_dir = os.path.join(
         checkpoint_base,
         model_name,           # freqnet
         cfg.exp_name,         # baseline
-        wandb.run.name        
+        run.name        
     )
     os.makedirs(checkpoint_dir, exist_ok=True)
     print(f'Checkpoint directory: {checkpoint_dir}')
     print(f'  Model: {model_name}')
     print(f'  Experiment: {cfg.exp_name}')
-    print(f'  Run: {wandb.run.name}')
+    print(f'  Run: {run.name}')
     
     optimizer = instantiate(cfg.optimizer, params=model.parameters())
     scheduler = instantiate(cfg.scheduler, optimizer=optimizer)
@@ -111,6 +126,9 @@ def main(cfg: DictConfig):
                 
                 # wandb에도 업로드
                 wandb.save(save_path)
+                
+                model_artifact.add_file(save_path)
+                run.log_artifact(model_artifact)
             
             # Best accuracy 기준 저장
             if val_acc > best_val_acc:
@@ -124,6 +142,9 @@ def main(cfg: DictConfig):
                 
                 # wandb에도 업로드
                 wandb.save(save_path)
+                
+                model_artifact.add_file(save_path)
+                run.log_artifact(model_artifact)
     
     # 최종 모델 저장
     if accelerator.is_main_process:
@@ -132,6 +153,8 @@ def main(cfg: DictConfig):
         torch.save(unwrapped_model.state_dict(), save_path)
         print(f'✓ Final model saved to {save_path}')
         
+        model_artifact.add_file(save_path)
+        run.log_artifact(model_artifact)
         # wandb에도 업로드
         wandb.save(save_path)
         
