@@ -1,6 +1,11 @@
 # 데이터셋 경로 (artifact 다운로드 시 자동으로 업데이트됨)
 path : "/content/data"  # 기본값 (artifact 사용 시 자동 덮어쓰기)
 
+# Artifact 다운로드 옵션
+# True: artifact를 다운로드하여 사용 (기본값)
+# False: 로컬 path를 그대로 사용 (artifact 다운로드 스킵)
+download_artifact : True
+
 # Processed artifact 이름
 # CLI에서 override 가능: data.processed_artifact=P-my-dataset:latest
 processed_artifact : "P-raw-dataset:latest"
