@@ -19,4 +19,4 @@ checkpoint:
   save_dir: "/content/drive/MyDrive/Models/checkpoints"  # 구글 드라이브 경로
 
 run:
-  epochs: 100
+  epochs: 20

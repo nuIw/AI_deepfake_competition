@@ -44,7 +44,8 @@ def main(cfg: DictConfig):
     model = instantiate(cfg.model)
     model_name = cfg.model.name  # name 접근
     
-    model_artifact = wandb.Artifact(name=model_name, type='model',
+    artifact_name = f'{model_name}_{cfg.exp_name}_{run.name}'    
+    model_artifact = wandb.Artifact(name=artifact_name, type='model',
                                     metadata=OmegaConf.to_container(cfg, resolve=True,throw_on_missing=True))
        
     # Artifact 다운로드 및 경로 업데이트
@@ -87,7 +88,7 @@ def main(cfg: DictConfig):
     )
     
     best_val_loss = float('inf')
-    best_val_acc = 0.0
+    best_val_f1 = 0.0
     
     for epoch in range(cfg.run.epochs):
         epoch_start = time.time()
@@ -123,25 +124,19 @@ def main(cfg: DictConfig):
                 
                 torch.save(unwrapped_model.state_dict(), save_path)
                 print(f'✓ Best loss model saved at epoch {epoch} to {save_path}')
-                
-                # wandb에도 업로드
-                wandb.save(save_path)
-                
+                                
                 model_artifact.add_file(save_path)
                 run.log_artifact(model_artifact)
             
-            # Best accuracy 기준 저장
-            if val_acc > best_val_acc:
-                best_val_acc = val_acc
+            # Best F1 score 기준 저장
+            if val_f1 > best_val_f1:
+                best_val_f1 = val_f1
                 
                 unwrapped_model = accelerator.unwrap_model(model)
-                save_path = os.path.join(checkpoint_dir, f'{model_name}_epoch{epoch}_best_acc.pth')
+                save_path = os.path.join(checkpoint_dir, f'{model_name}_epoch{epoch}_best_f1.pth')
                 
                 torch.save(unwrapped_model.state_dict(), save_path)
-                print(f'✓ Best accuracy model saved at epoch {epoch} to {save_path}')
-                
-                # wandb에도 업로드
-                wandb.save(save_path)
+                print(f'✓ Best F1 score model saved at epoch {epoch} to {save_path}')
                 
                 model_artifact.add_file(save_path)
                 run.log_artifact(model_artifact)
