@@ -126,7 +126,6 @@ def main(cfg: DictConfig):
                 print(f'✓ Best loss model saved at epoch {epoch} to {save_path}')
                                 
                 model_artifact.add_file(save_path)
-                run.log_artifact(model_artifact)
             
             # Best F1 score 기준 저장
             if val_f1 > best_val_f1:
@@ -139,7 +138,6 @@ def main(cfg: DictConfig):
                 print(f'✓ Best F1 score model saved at epoch {epoch} to {save_path}')
                 
                 model_artifact.add_file(save_path)
-                run.log_artifact(model_artifact)
     
     # 최종 모델 저장
     if accelerator.is_main_process:
