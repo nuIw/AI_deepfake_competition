@@ -6,9 +6,9 @@ path : "/content/data"  # 기본값 (artifact 사용 시 자동 덮어쓰기)
 # False: 로컬 path를 그대로 사용 (artifact 다운로드 스킵)
 download_artifact : True
 
-# Processed artifact 이름
-# CLI에서 override 가능: data.processed_artifact=P-my-dataset:latest
-processed_artifact : "P-raw-dataset:latest"
+# Raw artifact 이름 (리스트로 여러 아티팩트 지정 가능)
+# CLI에서 override 가능: data.raw_artifact=[P-my-dataset:latest,another-dataset:v1]
+raw_artifact : ["P-raw-dataset:latest"]
 
 batch_size : 64 #128 코랩에서 안돌아감, 64는 돌아갈듯
 num_workers : 4

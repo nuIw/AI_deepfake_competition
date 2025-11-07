@@ -50,16 +50,30 @@ def main(cfg: DictConfig):
        
     # Artifact 다운로드 옵션 확인
     if cfg.data.download_artifact:
-        print('Downloading artifact...')
-        dataset_artifact = run.use_artifact(cfg.data.processed_artifact)
-        dataset_dir = dataset_artifact.download()
+        print('Downloading artifacts...')
         
-        # cfg.data.path를 artifact 다운로드 경로로 업데이트
+        # raw_artifact가 리스트인지 단일 값인지 확인 (하위 호환성)
+        raw_artifacts = cfg.data.raw_artifact
+        if isinstance(raw_artifacts, str):
+            raw_artifacts = [raw_artifacts]
+        
+        # 모든 아티팩트를 같은 경로에 다운로드 (폴더 구조가 동일하므로)
+        dataset_dir = os.path.join(os.getcwd(), 'datasets')
+        os.makedirs(dataset_dir, exist_ok=True)
+        
+        for i, artifact_name in enumerate(raw_artifacts):
+            print(f'  Downloading artifact {i+1}/{len(raw_artifacts)}: {artifact_name}')
+            artifact = run.use_artifact(artifact_name)
+            # 같은 경로에 다운로드 (같은 파일명이면 덮어쓰기)
+            artifact.download(root=dataset_dir)
+        
+        # cfg.data.path를 다운로드 경로로 업데이트
         OmegaConf.set_struct(cfg, False)
         cfg.data.path = dataset_dir
         OmegaConf.set_struct(cfg, True)
         
         print(f'Dataset path updated to: {cfg.data.path}')
+        print(f'  Total artifacts downloaded: {len(raw_artifacts)}')
     else:
         print(f'Skipping artifact download. Using local path: {cfg.data.path}')
     
