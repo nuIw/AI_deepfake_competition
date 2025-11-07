@@ -62,6 +62,10 @@ def main(cfg: DictConfig):
         os.makedirs(dataset_dir, exist_ok=True)
         
         for i, artifact_name in enumerate(raw_artifacts):
+            # :버전이 없으면 추가
+            if ':' not in artifact_name:
+                artifact_name = f'{artifact_name}:latest'
+            
             print(f'  Downloading artifact {i+1}/{len(raw_artifacts)}: {artifact_name}')
             artifact = run.use_artifact(artifact_name)
             # 같은 경로에 다운로드 (같은 파일명이면 덮어쓰기)
