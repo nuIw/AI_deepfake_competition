@@ -135,6 +135,7 @@ def main(cfg: DictConfig):
     early_stop_patience = max(1, int(early_stopping_cfg.get('patience', 5))) if early_stop_enabled else None
     epochs_without_improve = 0
     should_stop = False
+    prev_val_loss = None  # 이전 epoch의 validation loss 저장
 
     for epoch in range(cfg.run.epochs):
         epoch_start = time.time()
@@ -190,12 +191,22 @@ def main(cfg: DictConfig):
                 model_artifact.add_file(save_path)
 
         if early_stop_enabled:
-            if improved_loss:
-                epochs_without_improve = 0
+            # 이전 epoch와 비교하여 개선되었는지 확인
+            if prev_val_loss is not None:
+                improved_from_prev = val_loss < prev_val_loss
+                if improved_from_prev:
+                    epochs_without_improve = 0
+                    if accelerator.is_main_process:
+                        print(f'Validation loss improved from {prev_val_loss:.4f} to {val_loss:.4f}')
+                else:
+                    epochs_without_improve += 1
+                    if accelerator.is_main_process:
+                        print(f'No validation loss improvement for {epochs_without_improve} epoch(s) (patience: {early_stop_patience}). '
+                              f'Previous: {prev_val_loss:.4f}, Current: {val_loss:.4f}')
             else:
-                epochs_without_improve += 1
-                if accelerator.is_main_process:
-                    print(f'No validation loss improvement for {epochs_without_improve} epoch(s) (patience: {early_stop_patience}).')
+                # 첫 epoch는 비교할 이전 값이 없으므로 개선으로 간주
+                improved_from_prev = True
+                epochs_without_improve = 0
 
             if accelerator.is_main_process:
                 wandb.log({'early_stopping/epochs_without_improve': epochs_without_improve}, step=epoch)
@@ -212,6 +223,9 @@ def main(cfg: DictConfig):
 
             if should_stop:
                 break
+            
+            # 다음 epoch를 위해 현재 validation loss 저장
+            prev_val_loss = val_loss
     
     # 최종 모델 저장
     if accelerator.is_main_process:
