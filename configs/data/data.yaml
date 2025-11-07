@@ -6,6 +6,11 @@ path : "/content/data"  # 기본값 (artifact 사용 시 자동 덮어쓰기)
 # False: 로컬 path를 그대로 사용 (artifact 다운로드 스킵)
 download_artifact : True
 
+# 라벨 폴더 정리 옵션
+# True: fake/true/0/1 등 혼재된 폴더명을 0(real), 1(fake)로 정규화 (기본값)
+# False: 라벨 정리 스킵
+organize_labels : True
+
 # Raw artifact 이름 (리스트로 여러 아티팩트 지정 가능)
 # CLI에서 override 가능: data.raw_artifact=[P-my-dataset:latest,another-dataset:v1]
 raw_artifact : ["P-raw-dataset:latest"]
