@@ -19,6 +19,9 @@ from omegaconf import DictConfig, OmegaConf
 from hydra.utils import instantiate
 from sklearn.metrics import f1_score
 
+# organize_labels 함수 import
+from organize_labels import organize_labels
+
 @hydra.main(config_path='../configs',config_name='config.yaml',version_base=None)
 def main(cfg: DictConfig):
     # Hydra가 working directory를 바꾸므로 다시 한번 확인
@@ -80,6 +83,22 @@ def main(cfg: DictConfig):
         print(f'  Total artifacts downloaded: {len(raw_artifacts)}')
     else:
         print(f'Skipping artifact download. Using local path: {cfg.data.path}')
+    
+    # 데이터셋 구조 정리 (설정에서 활성화된 경우)
+    if cfg.data.get('organize_labels', True):
+        print('\n' + '='*50)
+        print('Organizing dataset structure...')
+        print('  - Split folders: validation → val')
+        print('  - Label folders: fake→1, true→0')
+        print('='*50)
+        try:
+            organize_labels(cfg.data.path, dry_run=False)
+            print('\n✓ Dataset organization completed')
+        except Exception as e:
+            print(f'\n⚠ Warning: Dataset organization failed: {e}')
+            print('  Continuing with original folder structure...')
+    else:
+        print('Skipping dataset organization (data.organize_labels=False)')
     
     # 체크포인트 디렉토리 생성: 모델명/실험명/run이름
     checkpoint_base = cfg.checkpoint.save_dir
