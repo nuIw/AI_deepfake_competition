@@ -165,8 +165,6 @@ def main(cfg: DictConfig):
         
         model_artifact.add_file(save_path)
         run.log_artifact(model_artifact)
-        # wandb에도 업로드
-        wandb.save(save_path)
         
         wandb.finish()
     
