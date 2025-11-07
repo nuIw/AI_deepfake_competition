@@ -20,3 +20,6 @@ checkpoint:
 
 run:
   epochs: 20
+  early_stopping:
+    enabled: false
+    patience: 5

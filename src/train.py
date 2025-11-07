@@ -129,7 +129,13 @@ def main(cfg: DictConfig):
     
     best_val_loss = float('inf')
     best_val_f1 = 0.0
-    
+
+    early_stopping_cfg = cfg.run.get('early_stopping', {})
+    early_stop_enabled = early_stopping_cfg.get('enabled', False)
+    early_stop_patience = max(1, int(early_stopping_cfg.get('patience', 5))) if early_stop_enabled else None
+    epochs_without_improve = 0
+    should_stop = False
+
     for epoch in range(cfg.run.epochs):
         epoch_start = time.time()
         
@@ -153,31 +159,59 @@ def main(cfg: DictConfig):
                   f'Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.2f}%, Train F1: {train_f1:.4f} - '
                   f'Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.2f}%, Val F1: {val_f1:.4f} - LR: {current_lr:.6f}')
         
+        improved_loss = val_loss < best_val_loss
+        if improved_loss:
+            best_val_loss = val_loss
+
+        improved_f1 = val_f1 > best_val_f1
+        if improved_f1:
+            best_val_f1 = val_f1
+
         accelerator.wait_for_everyone()
         if accelerator.is_main_process:
             # Best loss 기준 저장
-            if val_loss < best_val_loss:
-                best_val_loss = val_loss
-                
+            if improved_loss:
                 unwrapped_model = accelerator.unwrap_model(model)
                 save_path = os.path.join(checkpoint_dir, f'{model_name}_epoch{epoch}_best_loss.pth')
-                
+
                 torch.save(unwrapped_model.state_dict(), save_path)
                 print(f'✓ Best loss model saved at epoch {epoch} to {save_path}')
-                                
+
                 model_artifact.add_file(save_path)
-            
+
             # Best F1 score 기준 저장
-            if val_f1 > best_val_f1:
-                best_val_f1 = val_f1
-                
+            if improved_f1:
                 unwrapped_model = accelerator.unwrap_model(model)
                 save_path = os.path.join(checkpoint_dir, f'{model_name}_epoch{epoch}_best_f1.pth')
-                
+
                 torch.save(unwrapped_model.state_dict(), save_path)
                 print(f'✓ Best F1 score model saved at epoch {epoch} to {save_path}')
-                
+
                 model_artifact.add_file(save_path)
+
+        if early_stop_enabled:
+            if improved_loss:
+                epochs_without_improve = 0
+            else:
+                epochs_without_improve += 1
+                if accelerator.is_main_process:
+                    print(f'No validation loss improvement for {epochs_without_improve} epoch(s) (patience: {early_stop_patience}).')
+
+            if accelerator.is_main_process:
+                wandb.log({'early_stopping/epochs_without_improve': epochs_without_improve}, step=epoch)
+
+            if epochs_without_improve >= early_stop_patience:
+                should_stop = True
+                if accelerator.is_main_process:
+                    print(f'[Early Stopping] Triggered at epoch {epoch}.')
+                    wandb.log({'early_stopping/triggered_epoch': epoch}, step=epoch)
+
+            stop_tensor = torch.tensor(1 if should_stop else 0, device=accelerator.device)
+            stop_tensor = accelerator.reduce(stop_tensor, reduction='max')
+            should_stop = bool(stop_tensor.item())
+
+            if should_stop:
+                break
     
     # 최종 모델 저장
     if accelerator.is_main_process:
@@ -210,7 +244,7 @@ def train(model, optimizer, criterion, train_loader, accelerator, epoch):
         optimizer.zero_grad()
         outputs = model(inputs)
         targets = targets.float()  # BCEWithLogitsLoss requires float targets
-        loss = criterion(outputs.squeeze(), targets)
+        loss = criterion(outputs.squeeze(-1), targets)
         cum_loss += loss.item() * inputs.size(0)
         total_samples += inputs.size(0)
         
@@ -281,7 +315,7 @@ def val(model, criterion, val_loader, accelerator, epoch):
         for batch_idx, (inputs, targets) in enumerate(pbar):
             outputs = model(inputs)
             targets = targets.float()  # BCEWithLogitsLoss requires float targets
-            loss = criterion(outputs.squeeze(), targets)
+            loss = criterion(outputs.squeeze(-1), targets)
             cum_loss += loss.item() * inputs.size(0)
             total_samples += inputs.size(0)
             
