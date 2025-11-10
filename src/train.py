@@ -133,8 +133,8 @@ def main(cfg: DictConfig):
     for epoch in range(cfg.run.epochs):
         epoch_start = time.time()
         
-        train_loss, train_acc, train_f1 = train(model, optimizer, criterion, train_loader, accelerator, epoch)
-        val_loss, val_acc, val_f1 = val(model, criterion, val_loader, accelerator, epoch)
+        train_loss, train_acc, train_f1_macro, train_f1_weighted = train(model, optimizer, criterion, train_loader, accelerator, epoch)
+        val_loss, val_acc, val_f1_macro, val_f1_weighted = val(model, criterion, val_loader, accelerator, epoch)
         scheduler.step()
         
         epoch_time = time.time() - epoch_start
@@ -150,8 +150,8 @@ def main(cfg: DictConfig):
             }, step=epoch)
             
             print(f'\nEpoch {epoch}/{cfg.run.epochs} - {epoch_time:.2f}s - '
-                  f'Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.2f}%, Train F1: {train_f1:.4f} - '
-                  f'Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.2f}%, Val F1: {val_f1:.4f} - LR: {current_lr:.6f}')
+                  f'Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.2f}%, Train F1-Macro: {train_f1_macro:.4f}, F1-Weighted: {train_f1_weighted:.4f} - '
+                  f'Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.2f}%, Val F1-Macro: {val_f1_macro:.4f}, F1-Weighted: {val_f1_weighted:.4f} - LR: {current_lr:.6f}')
         
         accelerator.wait_for_everyone()
         if accelerator.is_main_process:
@@ -168,14 +168,14 @@ def main(cfg: DictConfig):
                 model_artifact.add_file(save_path)
             
             # Best F1 score 기준 저장
-            if val_f1 > best_val_f1:
-                best_val_f1 = val_f1
+            if val_f1_macro > best_val_f1:
+                best_val_f1 = val_f1_macro
                 
                 unwrapped_model = accelerator.unwrap_model(model)
                 save_path = os.path.join(checkpoint_dir, f'{model_name}_epoch{epoch}_best_f1.pth')
                 
                 torch.save(unwrapped_model.state_dict(), save_path)
-                print(f'✓ Best F1 score model saved at epoch {epoch} to {save_path}')
+                print(f'✓ Best F1-Macro score model saved at epoch {epoch} to {save_path}')
                 
                 model_artifact.add_file(save_path)
     
@@ -250,10 +250,19 @@ def train(model, optimizer, criterion, train_loader, accelerator, epoch):
     all_predictions_gathered = accelerator.gather_for_metrics(all_predictions_tensor)
     all_targets_gathered = accelerator.gather_for_metrics(all_targets_tensor)
     
-    final_f1 = f1_score(
+    # Macro F1 score (클래스 균등 평균)
+    final_f1_macro = f1_score(
         all_targets_gathered.cpu().numpy(), 
         all_predictions_gathered.cpu().numpy(), 
-        average='macro',  # 두 클래스(0, 1) 평균
+        average='macro',
+        zero_division=0
+    )
+    
+    # Weighted F1 score (샘플 수 기반 가중 평균)
+    final_f1_weighted = f1_score(
+        all_targets_gathered.cpu().numpy(), 
+        all_predictions_gathered.cpu().numpy(), 
+        average='weighted',
         zero_division=0
     )
     
@@ -268,11 +277,12 @@ def train(model, optimizer, criterion, train_loader, accelerator, epoch):
     wandb.log({
         'train/loss': avg_loss,
         'train/accuracy': accuracy,
-        'train/f1_score': final_f1,
+        'train/f1_macro': final_f1_macro,
+        'train/f1_weighted': final_f1_weighted,
         'train/f1_class_0_real': per_class_f1[0],  # 클래스 0 (Real)
         'train/f1_class_1_fake': per_class_f1[1]   # 클래스 1 (Fake)
     }, step=epoch)
-    return avg_loss, accuracy, final_f1
+    return avg_loss, accuracy, final_f1_macro, final_f1_weighted
         
 def val(model, criterion, val_loader, accelerator, epoch):
     model.eval()
@@ -329,10 +339,19 @@ def val(model, criterion, val_loader, accelerator, epoch):
     all_predictions_gathered = accelerator.gather_for_metrics(all_predictions_tensor)
     all_targets_gathered = accelerator.gather_for_metrics(all_targets_tensor)
     
-    final_f1 = f1_score(
+    # Macro F1 score (클래스 균등 평균)
+    final_f1_macro = f1_score(
         all_targets_gathered.cpu().numpy(), 
         all_predictions_gathered.cpu().numpy(), 
-        average='macro',  # 두 클래스(0, 1) 평균
+        average='macro',
+        zero_division=0
+    )
+    
+    # Weighted F1 score (샘플 수 기반 가중 평균)
+    final_f1_weighted = f1_score(
+        all_targets_gathered.cpu().numpy(), 
+        all_predictions_gathered.cpu().numpy(), 
+        average='weighted',
         zero_division=0
     )
     
@@ -347,11 +366,12 @@ def val(model, criterion, val_loader, accelerator, epoch):
     wandb.log({
         'val/loss': avg_loss,
         'val/accuracy': accuracy,
-        'val/f1_score': final_f1,
+        'val/f1_macro': final_f1_macro,
+        'val/f1_weighted': final_f1_weighted,
         'val/f1_class_0_real': per_class_f1[0],  # 클래스 0 (Real)
         'val/f1_class_1_fake': per_class_f1[1]   # 클래스 1 (Fake)
     }, step=epoch)
-    return avg_loss, accuracy, final_f1
+    return avg_loss, accuracy, final_f1_macro, final_f1_weighted
 
 
 if __name__ == '__main__':
