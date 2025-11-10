@@ -22,4 +22,4 @@ run:
   epochs: 20
   early_stopping:
     enabled: True
-    patience: 3
+    patience: 5
