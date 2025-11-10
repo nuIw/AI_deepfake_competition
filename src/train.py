@@ -51,6 +51,22 @@ def main(cfg: DictConfig):
     model_artifact = wandb.Artifact(name=artifact_name, type='model',
                                     metadata=OmegaConf.to_container(cfg, resolve=True,throw_on_missing=True))
        
+    # Artifact 사용 로깅 (download_artifact 설정과 무관)
+    if hasattr(cfg.data, 'raw_artifact') and cfg.data.raw_artifact:
+        # raw_artifact가 리스트인지 단일 값인지 확인 (하위 호환성)
+        raw_artifacts = cfg.data.raw_artifact
+        if isinstance(raw_artifacts, str):
+            raw_artifacts = [raw_artifacts]
+        
+        # WandB에 artifact 사용 로깅
+        for artifact_name in raw_artifacts:
+            # :버전이 없으면 추가
+            if ':' not in artifact_name:
+                artifact_name = f'{artifact_name}:latest'
+            
+            print(f'Logging artifact usage: {artifact_name}')
+            run.use_artifact(artifact_name)
+    
     # Artifact 다운로드 옵션 확인
     if cfg.data.download_artifact:
         print('Downloading artifacts...')
@@ -277,7 +293,7 @@ def train(model, optimizer, criterion, train_loader, accelerator, epoch):
     wandb.log({
         'train/loss': avg_loss,
         'train/accuracy': accuracy,
-        'train/f1_macro': final_f1_macro,
+        'train/f1_score': final_f1_macro,
         'train/f1_weighted': final_f1_weighted,
         'train/f1_class_0_real': per_class_f1[0],  # 클래스 0 (Real)
         'train/f1_class_1_fake': per_class_f1[1]   # 클래스 1 (Fake)
@@ -366,7 +382,7 @@ def val(model, criterion, val_loader, accelerator, epoch):
     wandb.log({
         'val/loss': avg_loss,
         'val/accuracy': accuracy,
-        'val/f1_macro': final_f1_macro,
+        'val/f1_score': final_f1_macro,
         'val/f1_weighted': final_f1_weighted,
         'val/f1_class_0_real': per_class_f1[0],  # 클래스 0 (Real)
         'val/f1_class_1_fake': per_class_f1[1]   # 클래스 1 (Fake)
