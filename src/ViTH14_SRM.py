@@ -23,9 +23,8 @@ class SRMConv(nn.Module):
 class Deepfake_ViTH14_SRMBRANCH(nn.Module):
     def __init__(self):
         super().__init__()
-        # backbone load without downloading on inference server
-        self.backbone, _, _ = open_clip.create_model_and_transforms(
-            'ViT-H-14', pretrained=None
+        self.backbone, self.preprocess, _ = open_clip.create_model_and_transforms(
+            'ViT-H-14', pretrained='laion2b_s32b_b79k'
         )
 
         self.srm = SRMConv()
