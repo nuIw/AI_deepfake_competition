@@ -4,7 +4,7 @@ defaults:
   - optimizer: adam
   - scheduler: cosine
   - criterion: cross_entropy
-  - data: data
+  - data: data_face_detection
   - _self_               
 
 seed: 42
