@@ -215,7 +215,7 @@ def train(model, optimizer, criterion, train_loader, accelerator, epoch):
         total_samples += inputs.size(0)
         
         # Accuracy 계산 (Binary classification)
-        predicted = (outputs.squeeze() > 0).float()
+        predicted = (outputs.squeeze() > 0.).float()
         correct += (predicted == targets).sum().item()
         
         # F1 score를 위한 예측/타겟 저장
@@ -257,10 +257,21 @@ def train(model, optimizer, criterion, train_loader, accelerator, epoch):
         zero_division=0
     )
     
+    # 각 클래스별 F1 score 계산
+    per_class_f1 = f1_score(
+        all_targets_gathered.cpu().numpy(), 
+        all_predictions_gathered.cpu().numpy(), 
+        average=None,  # 각 클래스별로 반환
+        zero_division=0
+    )
+    
     wandb.log({
         'train/loss': avg_loss,
         'train/accuracy': accuracy,
-        'train/f1_score': final_f1}, step=epoch)
+        'train/f1_score': final_f1,
+        'train/f1_class_0_real': per_class_f1[0],  # 클래스 0 (Real)
+        'train/f1_class_1_fake': per_class_f1[1]   # 클래스 1 (Fake)
+    }, step=epoch)
     return avg_loss, accuracy, final_f1
         
 def val(model, criterion, val_loader, accelerator, epoch):
@@ -325,10 +336,21 @@ def val(model, criterion, val_loader, accelerator, epoch):
         zero_division=0
     )
     
+    # 각 클래스별 F1 score 계산
+    per_class_f1 = f1_score(
+        all_targets_gathered.cpu().numpy(), 
+        all_predictions_gathered.cpu().numpy(), 
+        average=None,  # 각 클래스별로 반환
+        zero_division=0
+    )
+    
     wandb.log({
         'val/loss': avg_loss,
         'val/accuracy': accuracy,
-        'val/f1_score': final_f1}, step=epoch)
+        'val/f1_score': final_f1,
+        'val/f1_class_0_real': per_class_f1[0],  # 클래스 0 (Real)
+        'val/f1_class_1_fake': per_class_f1[1]   # 클래스 1 (Fake)
+    }, step=epoch)
     return avg_loss, accuracy, final_f1
 
 
