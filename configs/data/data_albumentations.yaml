@@ -1,5 +1,5 @@
-# 얼굴 검출 기반 데이터셋 설정
-# dlib를 사용하여 얼굴을 검출하고 크롭한 후 학습
+# 얼굴 검출 + Albumentations 데이터셋 설정
+# dlib를 사용하여 얼굴을 검출하고 크롭한 후 albumentations로 augmentation
 
 path : "/content/MIP-team11/datasets"
 
@@ -20,24 +20,52 @@ face_detection:
 train_loader:
   _target_: torch.utils.data.DataLoader
   dataset:
-    _target_: preprocessing.datasets.FaceDetectionDataset
+    _target_: preprocessing.datasets.AlbumentationsFaceDetectionDataset
     root: ${data.path}/train
     target_size: ${data.face_detection.target_size}
     resize_for_detection: ${data.face_detection.resize_for_detection}
     scale_factor: ${data.face_detection.scale_factor}
     return_original_on_fail: ${data.face_detection.return_original_on_fail}
     transform:
-      _target_: torchvision.transforms.Compose
+      _target_: albumentations.Compose
       transforms:
         # 얼굴 검출 후에는 이미 256x256이므로 Resize 불필요
-        - _target_: torchvision.transforms.RandomHorizontalFlip
-        - _target_: torchvision.transforms.ColorJitter
+        
+        # ImageCompression - JPEG/WebP 압축 시뮬레이션
+        # deepfake 이미지는 압축 아티팩트를 가질 수 있으므로 학습에 도움
+        - _target_: albumentations.ImageCompression
+          quality_lower: 60
+          quality_upper: 100
+          compression_type: jpeg  # jpeg 또는 webp
+          p: 0.5  # 50% 확률로 적용
+        
+        # 추가 augmentation
+        - _target_: albumentations.HorizontalFlip
+          p: 0.5
+        
+        - _target_: albumentations.ColorJitter
           brightness: 0.2
           contrast: 0.2
-        - _target_: torchvision.transforms.ToTensor
-        - _target_: torchvision.transforms.Normalize
+          saturation: 0.1
+          #hue: 0.1
+          p: 1.0
+        
+        # Optional: 추가 augmentation (필요시 활성화)
+        # - _target_: albumentations.GaussNoise
+        #   var_limit: [10.0, 50.0]
+        #   p: 0.3
+        
+        # - _target_: albumentations.Blur
+        #   blur_limit: 3
+        #   p: 0.3
+        
+        # Normalization 및 Tensor 변환
+        - _target_: albumentations.Normalize
           mean: [0.485, 0.456, 0.406]  # ImageNet mean
           std: [0.229, 0.224, 0.225]   # ImageNet std
+        
+        - _target_: albumentations.pytorch.ToTensorV2
+  
   batch_size: ${data.batch_size}
   shuffle: True
   num_workers: ${data.num_workers}
@@ -46,19 +74,22 @@ train_loader:
 val_loader:
   _target_: torch.utils.data.DataLoader
   dataset:
-    _target_: preprocessing.datasets.FaceDetectionDataset
+    _target_: preprocessing.datasets.AlbumentationsFaceDetectionDataset
     root: ${data.path}/val
     target_size: ${data.face_detection.target_size}
     resize_for_detection: ${data.face_detection.resize_for_detection}
     scale_factor: ${data.face_detection.scale_factor}
     return_original_on_fail: ${data.face_detection.return_original_on_fail}
     transform:
-      _target_: torchvision.transforms.Compose
+      _target_: albumentations.Compose
       transforms:
-        - _target_: torchvision.transforms.ToTensor
-        - _target_: torchvision.transforms.Normalize
-          mean: [0.485, 0.456, 0.406]  # ImageNet mean
-          std: [0.229, 0.224, 0.225]   # ImageNet std
+        # Validation에서는 augmentation 없이 정규화만 수행
+        - _target_: albumentations.Normalize
+          mean: [0.485, 0.456, 0.406]
+          std: [0.229, 0.224, 0.225]
+        
+        - _target_: albumentations.pytorch.ToTensorV2
+  
   batch_size: ${data.batch_size}
   shuffle: False
   num_workers: ${data.num_workers}
