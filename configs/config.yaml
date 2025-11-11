@@ -4,7 +4,7 @@ defaults:
   - optimizer: adam
   - scheduler: cosine
   - criterion: cross_entropy
-  - data: data
+  - data: data_face_detection
   - _self_               
 
 seed: 42
@@ -22,4 +22,4 @@ run:
   epochs: 20
   early_stopping:
     enabled: True
-    patience: 3
+    patience: 5

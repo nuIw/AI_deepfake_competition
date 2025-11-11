@@ -51,6 +51,22 @@ def main(cfg: DictConfig):
     model_artifact = wandb.Artifact(name=artifact_name, type='model',
                                     metadata=OmegaConf.to_container(cfg, resolve=True,throw_on_missing=True))
        
+    # Artifact 사용 로깅 (download_artifact 설정과 무관)
+    if hasattr(cfg.data, 'raw_artifact') and cfg.data.raw_artifact:
+        # raw_artifact가 리스트인지 단일 값인지 확인 (하위 호환성)
+        raw_artifacts = cfg.data.raw_artifact
+        if isinstance(raw_artifacts, str):
+            raw_artifacts = [raw_artifacts]
+        
+        # WandB에 artifact 사용 로깅
+        for artifact_name in raw_artifacts:
+            # :버전이 없으면 추가
+            if ':' not in artifact_name:
+                artifact_name = f'{artifact_name}:latest'
+            
+            print(f'Logging artifact usage: {artifact_name}')
+            run.use_artifact(artifact_name)
+    
     # Artifact 다운로드 옵션 확인
     if cfg.data.download_artifact:
         print('Downloading artifacts...')
@@ -129,19 +145,12 @@ def main(cfg: DictConfig):
     
     best_val_loss = float('inf')
     best_val_f1 = 0.0
-
-    early_stopping_cfg = cfg.run.get('early_stopping', {})
-    early_stop_enabled = early_stopping_cfg.get('enabled', False)
-    early_stop_patience = max(1, int(early_stopping_cfg.get('patience', 5))) if early_stop_enabled else None
-    epochs_without_improve = 0
-    should_stop = False
-    prev_val_loss = None  # 이전 epoch의 validation loss 저장
-
+    
     for epoch in range(cfg.run.epochs):
         epoch_start = time.time()
         
-        train_loss, train_acc, train_f1 = train(model, optimizer, criterion, train_loader, accelerator, epoch)
-        val_loss, val_acc, val_f1 = val(model, criterion, val_loader, accelerator, epoch)
+        train_loss, train_acc, train_f1_macro, train_f1_weighted = train(model, optimizer, criterion, train_loader, accelerator, epoch)
+        val_loss, val_acc, val_f1_macro, val_f1_weighted = val(model, criterion, val_loader, accelerator, epoch)
         scheduler.step()
         
         epoch_time = time.time() - epoch_start
@@ -157,75 +166,34 @@ def main(cfg: DictConfig):
             }, step=epoch)
             
             print(f'\nEpoch {epoch}/{cfg.run.epochs} - {epoch_time:.2f}s - '
-                  f'Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.2f}%, Train F1: {train_f1:.4f} - '
-                  f'Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.2f}%, Val F1: {val_f1:.4f} - LR: {current_lr:.6f}')
+                  f'Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.2f}%, Train F1-Macro: {train_f1_macro:.4f}, F1-Weighted: {train_f1_weighted:.4f} - '
+                  f'Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.2f}%, Val F1-Macro: {val_f1_macro:.4f}, F1-Weighted: {val_f1_weighted:.4f} - LR: {current_lr:.6f}')
         
-        improved_loss = val_loss < best_val_loss
-        if improved_loss:
-            best_val_loss = val_loss
-
-        improved_f1 = val_f1 > best_val_f1
-        if improved_f1:
-            best_val_f1 = val_f1
-
         accelerator.wait_for_everyone()
         if accelerator.is_main_process:
             # Best loss 기준 저장
-            if improved_loss:
+            if val_loss < best_val_loss:
+                best_val_loss = val_loss
+                
                 unwrapped_model = accelerator.unwrap_model(model)
                 save_path = os.path.join(checkpoint_dir, f'{model_name}_epoch{epoch}_best_loss.pth')
-
+                
                 torch.save(unwrapped_model.state_dict(), save_path)
                 print(f'✓ Best loss model saved at epoch {epoch} to {save_path}')
-
+                                
                 model_artifact.add_file(save_path)
-
+            
             # Best F1 score 기준 저장
-            if improved_f1:
+            if val_f1_macro > best_val_f1:
+                best_val_f1 = val_f1_macro
+                
                 unwrapped_model = accelerator.unwrap_model(model)
                 save_path = os.path.join(checkpoint_dir, f'{model_name}_epoch{epoch}_best_f1.pth')
-
+                
                 torch.save(unwrapped_model.state_dict(), save_path)
-                print(f'✓ Best F1 score model saved at epoch {epoch} to {save_path}')
-
+                print(f'✓ Best F1-Macro score model saved at epoch {epoch} to {save_path}')
+                
                 model_artifact.add_file(save_path)
-
-        if early_stop_enabled:
-            # 이전 epoch와 비교하여 개선되었는지 확인
-            if prev_val_loss is not None:
-                improved_from_prev = val_loss < prev_val_loss
-                if improved_from_prev:
-                    epochs_without_improve = 0
-                    if accelerator.is_main_process:
-                        print(f'Validation loss improved from {prev_val_loss:.4f} to {val_loss:.4f}')
-                else:
-                    epochs_without_improve += 1
-                    if accelerator.is_main_process:
-                        print(f'No validation loss improvement for {epochs_without_improve} epoch(s) (patience: {early_stop_patience}). '
-                              f'Previous: {prev_val_loss:.4f}, Current: {val_loss:.4f}')
-            else:
-                # 첫 epoch는 비교할 이전 값이 없으므로 개선으로 간주
-                improved_from_prev = True
-                epochs_without_improve = 0
-
-            if accelerator.is_main_process:
-                wandb.log({'early_stopping/epochs_without_improve': epochs_without_improve}, step=epoch)
-
-            if epochs_without_improve >= early_stop_patience:
-                should_stop = True
-                if accelerator.is_main_process:
-                    print(f'[Early Stopping] Triggered at epoch {epoch}.')
-                    wandb.log({'early_stopping/triggered_epoch': epoch}, step=epoch)
-
-            stop_tensor = torch.tensor(1 if should_stop else 0, device=accelerator.device)
-            stop_tensor = accelerator.reduce(stop_tensor, reduction='max')
-            should_stop = bool(stop_tensor.item())
-
-            if should_stop:
-                break
-            
-            # 다음 epoch를 위해 현재 validation loss 저장
-            prev_val_loss = val_loss
     
     # 최종 모델 저장
     if accelerator.is_main_process:
@@ -258,12 +226,12 @@ def train(model, optimizer, criterion, train_loader, accelerator, epoch):
         optimizer.zero_grad()
         outputs = model(inputs)
         targets = targets.float()  # BCEWithLogitsLoss requires float targets
-        loss = criterion(outputs.squeeze(-1), targets)
+        loss = criterion(outputs.squeeze(), targets)
         cum_loss += loss.item() * inputs.size(0)
         total_samples += inputs.size(0)
         
         # Accuracy 계산 (Binary classification)
-        predicted = (outputs.squeeze() > 0).float()
+        predicted = (outputs.squeeze() > 0.).float()
         correct += (predicted == targets).sum().item()
         
         # F1 score를 위한 예측/타겟 저장
@@ -298,18 +266,39 @@ def train(model, optimizer, criterion, train_loader, accelerator, epoch):
     all_predictions_gathered = accelerator.gather_for_metrics(all_predictions_tensor)
     all_targets_gathered = accelerator.gather_for_metrics(all_targets_tensor)
     
-    final_f1 = f1_score(
+    # Macro F1 score (클래스 균등 평균)
+    final_f1_macro = f1_score(
         all_targets_gathered.cpu().numpy(), 
         all_predictions_gathered.cpu().numpy(), 
-        average='macro',  # 두 클래스(0, 1) 평균
+        average='macro',
+        zero_division=0
+    )
+    
+    # Weighted F1 score (샘플 수 기반 가중 평균)
+    final_f1_weighted = f1_score(
+        all_targets_gathered.cpu().numpy(), 
+        all_predictions_gathered.cpu().numpy(), 
+        average='weighted',
+        zero_division=0
+    )
+    
+    # 각 클래스별 F1 score 계산
+    per_class_f1 = f1_score(
+        all_targets_gathered.cpu().numpy(), 
+        all_predictions_gathered.cpu().numpy(), 
+        average=None,  # 각 클래스별로 반환
         zero_division=0
     )
     
     wandb.log({
         'train/loss': avg_loss,
         'train/accuracy': accuracy,
-        'train/f1_score': final_f1}, step=epoch)
-    return avg_loss, accuracy, final_f1
+        'train/f1_score': final_f1_macro,
+        'train/f1_weighted': final_f1_weighted,
+        'train/f1_class_0_real': per_class_f1[0],  # 클래스 0 (Real)
+        'train/f1_class_1_fake': per_class_f1[1]   # 클래스 1 (Fake)
+    }, step=epoch)
+    return avg_loss, accuracy, final_f1_macro, final_f1_weighted
         
 def val(model, criterion, val_loader, accelerator, epoch):
     model.eval()
@@ -329,7 +318,7 @@ def val(model, criterion, val_loader, accelerator, epoch):
         for batch_idx, (inputs, targets) in enumerate(pbar):
             outputs = model(inputs)
             targets = targets.float()  # BCEWithLogitsLoss requires float targets
-            loss = criterion(outputs.squeeze(-1), targets)
+            loss = criterion(outputs.squeeze(), targets)
             cum_loss += loss.item() * inputs.size(0)
             total_samples += inputs.size(0)
             
@@ -366,18 +355,39 @@ def val(model, criterion, val_loader, accelerator, epoch):
     all_predictions_gathered = accelerator.gather_for_metrics(all_predictions_tensor)
     all_targets_gathered = accelerator.gather_for_metrics(all_targets_tensor)
     
-    final_f1 = f1_score(
+    # Macro F1 score (클래스 균등 평균)
+    final_f1_macro = f1_score(
         all_targets_gathered.cpu().numpy(), 
         all_predictions_gathered.cpu().numpy(), 
-        average='macro',  # 두 클래스(0, 1) 평균
+        average='macro',
+        zero_division=0
+    )
+    
+    # Weighted F1 score (샘플 수 기반 가중 평균)
+    final_f1_weighted = f1_score(
+        all_targets_gathered.cpu().numpy(), 
+        all_predictions_gathered.cpu().numpy(), 
+        average='weighted',
+        zero_division=0
+    )
+    
+    # 각 클래스별 F1 score 계산
+    per_class_f1 = f1_score(
+        all_targets_gathered.cpu().numpy(), 
+        all_predictions_gathered.cpu().numpy(), 
+        average=None,  # 각 클래스별로 반환
         zero_division=0
     )
     
     wandb.log({
         'val/loss': avg_loss,
         'val/accuracy': accuracy,
-        'val/f1_score': final_f1}, step=epoch)
-    return avg_loss, accuracy, final_f1
+        'val/f1_score': final_f1_macro,
+        'val/f1_weighted': final_f1_weighted,
+        'val/f1_class_0_real': per_class_f1[0],  # 클래스 0 (Real)
+        'val/f1_class_1_fake': per_class_f1[1]   # 클래스 1 (Fake)
+    }, step=epoch)
+    return avg_loss, accuracy, final_f1_macro, final_f1_weighted
 
 
 if __name__ == '__main__':
