@@ -1,0 +1,79 @@
+# Albumentations를 사용하는 데이터셋 설정
+# ImageCompression을 포함한 다양한 augmentation 적용
+
+path : "/content/data"
+
+download_artifact : True
+organize_labels : True
+raw_artifact : ["P-raw-dataset:latest"]
+
+batch_size : 128
+num_workers : 12
+
+train_loader:
+  _target_: torch.utils.data.DataLoader
+  dataset:
+    _target_: preprocessing.datasets.AlbumentationsDataset
+    root: ${data.path}/train
+    transform:
+      _target_: albumentations.Compose
+      transforms:
+        # Resize
+        - _target_: albumentations.Resize
+          height: 256
+          width: 256
+        
+        # ImageCompression - JPEG/WebP 압축 시뮬레이션
+        # quality_lower/upper: 압축 품질 범위 (낮을수록 더 많이 압축)
+        - _target_: albumentations.ImageCompression
+          quality_lower: 60
+          quality_upper: 100
+          compression_type: 0  # 0: JPEG, 1: WebP
+          p: 0.5  # 50% 확률로 적용
+        
+        # 추가 augmentation
+        - _target_: albumentations.HorizontalFlip
+          p: 0.5
+        
+        - _target_: albumentations.ColorJitter
+          brightness: 0.2
+          contrast: 0.2
+          saturation: 0.1
+          hue: 0.1
+          p: 0.5
+        
+        # Normalization 및 Tensor 변환
+        - _target_: albumentations.Normalize
+          mean: [0.485, 0.456, 0.406]  # ImageNet mean
+          std: [0.229, 0.224, 0.225]   # ImageNet std
+        
+        - _target_: albumentations.pytorch.ToTensorV2
+  
+  batch_size: ${data.batch_size}
+  shuffle: True
+  num_workers: ${data.num_workers}
+  pin_memory: True
+
+val_loader:
+  _target_: torch.utils.data.DataLoader
+  dataset:
+    _target_: preprocessing.datasets.AlbumentationsDataset
+    root: ${data.path}/val
+    transform:
+      _target_: albumentations.Compose
+      transforms:
+        - _target_: albumentations.Resize
+          height: 256
+          width: 256
+        
+        - _target_: albumentations.Normalize
+          mean: [0.485, 0.456, 0.406]
+          std: [0.229, 0.224, 0.225]
+        
+        - _target_: albumentations.pytorch.ToTensorV2
+  
+  batch_size: ${data.batch_size}
+  shuffle: False
+  num_workers: ${data.num_workers}
+  pin_memory: True
+
