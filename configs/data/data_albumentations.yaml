@@ -1,7 +1,7 @@
 # 얼굴 검출 + Albumentations 데이터셋 설정
 # dlib를 사용하여 얼굴을 검출하고 크롭한 후 albumentations로 augmentation
 
-path : "/content/data"
+path : "/content/MIP-team11/datasets"
 
 download_artifact : True
 organize_labels : True
@@ -36,7 +36,7 @@ train_loader:
         - _target_: albumentations.ImageCompression
           quality_lower: 60
           quality_upper: 100
-          compression_type: 0  # 0: JPEG, 1: WebP
+          compression_type: jpeg  # jpeg 또는 webp
           p: 0.5  # 50% 확률로 적용
         
         # 추가 augmentation

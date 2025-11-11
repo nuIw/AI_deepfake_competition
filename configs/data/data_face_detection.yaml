@@ -1,7 +1,7 @@
 # 얼굴 검출 기반 데이터셋 설정
 # dlib를 사용하여 얼굴을 검출하고 크롭한 후 학습
 
-path : "/content/data"
+path : "/content/MIP-team11/datasets"
 
 download_artifact : True
 organize_labels : True

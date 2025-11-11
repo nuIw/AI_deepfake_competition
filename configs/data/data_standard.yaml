@@ -1,7 +1,7 @@
 # 표준 데이터셋 설정 (얼굴 검출 없음)
 # ImageFolder와 유사하지만 커스텀 Dataset 사용
 
-path : "/content/data"
+path : "/content/MIP-team11/datasets"
 
 download_artifact : True
 organize_labels : True
